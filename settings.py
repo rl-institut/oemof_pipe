@@ -1,0 +1,14 @@
+"""Module to set up project from envs."""
+
+import os
+import pathlib
+from dotenv import load_dotenv
+
+load_dotenv()
+
+COMPONENTS_DIR = pathlib.Path(
+    os.environ.get("COMPONENTS_DIR", pathlib.Path(__file__).parent / "components"),
+)
+DATAPACKAGE_DIR = pathlib.Path(
+    os.environ.get("DATAPACKAGE_DIR", pathlib.Path.cwd() / "datapackages"),
+)
