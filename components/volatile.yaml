@@ -1,0 +1,53 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  bus:
+    type: str
+    unit: n/a
+    description: The bus this component is connected to
+  capacity:
+    type: float
+    unit: MW
+    description: Installed capacity
+  capacity_cost:
+    type: float
+    unit: Eur/MW
+    description: Annualized costs of capacity expansion
+  expandable:
+    type: boolean
+    unit: n/a
+    description: Capacity can be expanded
+  capacity_potential:
+    type: float
+    unit: MW
+    description: Max install capacity if investment
+  marginal_cost:
+    type: float
+    unit: Eur/MWh
+    description: Marginal cost
+  profile:
+    type: str
+    unit: ''
+    description: Name of the profile
+  output_parameters:
+    type: dict
+    unit: n/a
+    description: Optional parameters passed to oemof-solph's output flow

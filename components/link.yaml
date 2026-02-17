@@ -1,0 +1,49 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  from_bus:
+    type: str
+    unit: n/a
+    description: Bus where link starts
+  to_bus:
+    type: str
+    unit: n/a
+    description: Bus where link ends
+  from_to_capacity:
+    type: float
+    unit: MW
+    description: Net transfer capacity in defined direction
+  to_from_capacity:
+    type: float
+    unit: MW
+    description: Net transfer capacity opposite to defined direction
+  expandable:
+    type: boolean
+    unit: ''
+    description: Capacity can be expanded
+  capacity_cost:
+    type: float
+    unit: Eur/MW
+    description: Annualized costs of capacity expansion
+  loss:
+    type: float
+    unit: unitless
+    description: Transmission losses

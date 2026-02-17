@@ -1,0 +1,61 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  bus:
+    type: str
+    unit: n/a
+    description: The bus this component is connected to
+  capacity_turbine:
+    type: float
+    unit: MW
+    description: Installed turbine capacity
+  capacity_pump:
+    type: float
+    unit: MW
+    description: Installed pump capacity
+  storage_capacity:
+    type: float
+    unit: MWh
+    description: Installed storage capacity
+  initial_storage_level:
+    type: float
+    unit: MWh
+    description: Initial reservoir filling level
+  efficiency_turbine:
+    type: float
+    unit: unitless
+    description: Turbine efficiency (discharging)
+  efficiency_pump:
+    type: float
+    unit: unitless
+    description: Pump efficiency (charging)
+  marginal_cost:
+    type: float
+    unit: Eur/MWh
+    description: Marginal cost of charging/discharging
+  profile:
+    type: str
+    unit: ''
+    description: Name of the inflow profile of inflow into the storage
+  output_parameters:
+    type: dict
+    unit: n/a
+    description: Optional parameters passed to oemof-solph's output flow

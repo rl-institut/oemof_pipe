@@ -1,0 +1,38 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  bus:
+    type: str
+    unit: n/a
+    description: The bus this component is connected to
+  capacity:
+    type: float
+    unit: MW
+    description: Maximum allowed shortage which is unlimited if left empty and invest
+      applies
+  marginal_cost:
+    type: float
+    unit: Eur/MWh
+    description: Marginal cost
+  output_parameters:
+    type: dict
+    unit: n/a
+    description: Optional parameters passed to oemof-solph's output flow

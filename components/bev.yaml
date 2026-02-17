@@ -1,0 +1,77 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  bus:
+    type: str
+    unit: n/a
+    description: The bus this component is connected to
+  capacity:
+    type: float
+    unit: MW
+    description: Installed capacity
+  storage_capacity:
+    type: float
+    unit: MWh
+    description: Installed storage capacity
+  efficiency_charging:
+    type: float
+    unit: unitless
+    description: Efficiency of charging
+  efficiency_discharging:
+    type: float
+    unit: unitless
+    description: Efficiency of discharging
+  efficiency_v2g:
+    type: float
+    unit: unitless
+    description: Efficiency of vehicle-to-grid
+  marginal_cost:
+    type: float
+    unit: Eur/MWh
+    description: Marginal cost of vehicle-to-grid
+  availability:
+    type: str
+    unit: ''
+    description: Ratio of cars with grid contact profile
+  amount:
+    type: float
+    unit: MWh
+    description: Total amount of energy consumed by driving
+  drive_power:
+    type: str
+    unit: ''
+    description: Drive power profile as a ratio of amount
+  min_storage_level:
+    type: str
+    unit: ''
+    description: Min charge level profile
+  max_storage_level:
+    type: str
+    unit: ''
+    description: Max charge level profile
+  input_parameters:
+    type: dict
+    unit: n/a
+    description: Optional parameters passed to oemof-solph's input flow
+  output_parameters:
+    type: dict
+    unit: n/a
+    description: Optional parameters passed to oemof-solph's output flow

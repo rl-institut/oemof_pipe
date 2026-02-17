@@ -1,0 +1,65 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: ''
+    description: Energy carrier of input flow
+  tech:
+    type: str
+    unit: ''
+    description: Technology
+  fuel_bus:
+    type: str
+    unit: ''
+    description: The bus that supports the fuel for the CHP
+  electricity_bus:
+    type: str
+    unit: n/a
+    description: The bus for electricity output
+  heat_bus:
+    type: str
+    unit: n/a
+    description: The bus for heat output
+  capacity:
+    type: float
+    unit: MW_el
+    description: Installed electric capacity in full extraction mode
+  electric_efficiency:
+    type: float
+    unit: ''
+    description: Electrical efficiency of the chp unit in full backpressure mode
+  thermal_efficiency:
+    type: float
+    unit: ''
+    description: Thermal efficiency of the chp unit in full backpressure mode
+  condensing_efficiency:
+    type: float
+    unit: ''
+    description: Electrical efficiency if turbine operates in full extraction mode
+  expandable:
+    type: boolean
+    unit: ''
+    description: Capacity can be expanded
+  capacity_cost:
+    type: float
+    unit: Eur/MW
+    description: Annualized costs of capacity expansion
+  carrier_cost:
+    type: float
+    unit: Eur/MWh
+    description: Cost per unit of used fuel
+  marginal_cost:
+    type: float
+    unit: Eur/MWh_el
+    description: Marginal cost per unit of produced electrical output

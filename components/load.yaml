@@ -1,0 +1,33 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  bus:
+    type: str
+    unit: n/a
+    description: The bus this component is connected to
+  amount:
+    type: float
+    unit: GWh/a
+    description: Total load over one year
+  profile:
+    type: str
+    unit: n/a
+    description: Name of the profile
