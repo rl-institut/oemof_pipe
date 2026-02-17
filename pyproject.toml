@@ -5,4 +5,44 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "frictionless>=5.18.1",
+    "textual-dev>=1.8.0",
+    "textual[syntax]>=8.0.0",
+]
+
+# ==== ruff ====
+[tool.ruff]
+output-format = "concise"  # This enables file-links to errors in git console
+line-length = 120
+lint.select = ["ALL"]
+lint.ignore = [
+  "I001",    # Import block is un-sorted or un-formatted (done by isort)
+  "D203",    # 1 blank line required before class docstring
+  "D212",    # Multi-line docstring summary should start at the first line pydocstyle
+  "ANN003",  # Missing type annotation for `**kwargs`
+  "EM102",   # Exception must not use an f-string literal, assign to variable first
+  "TRY003",  # Avoid specifying long messages outside the exception class
+  "S101",    # Use of `assert` detected
+  "UP007",   # Use `X | Y` for type annotations
+  "B905",    # `zip()` without an explicit `strict=` parameter
+  "FIX001",  # Line contains FIXME
+  "FIX002",  # Line contains TODO
+  "RET504",  # Unnecessary variable assignment before `return` statement
+  "G004",    # Logging statement uses f-string
+  "PD011",   # Use `.to_numpy()` instead of `.values`  (does not work out of the box)
+  "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+]
+lint.unfixable = ["UP007", "I001"]
+exclude = [
+  "alembic/"
+]
+fix = true
+show-fixes = true
+
+[tool.isort]
+multi_line_output = 3
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
 ]
