@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import yaml
 from pathlib import Path
 from typing import Any
@@ -18,15 +19,129 @@ FRICTIONLESS_MAPPING = {
 }
 
 
+@dataclass
+class Component:
+    """Dataclass to represent components."""
+
+    name: str
+    attributes: dict[str, dict[str, str]]
+    busses: list[str]
+    sequences: list[str]
+
+    @classmethod
+    def from_name(cls, component_name: str) -> Component:
+        """Create component looking up name in components directory."""
+        with (settings.COMPONENTS_DIR / f"{component_name}.yaml").open("r") as f:
+            data = yaml.safe_load(f)
+        return cls(
+            name=component_name,
+            attributes=data.get("attributes", {}),
+            busses=data.get("busses", []),
+            sequences=data.get("sequences", []),
+        )
+
+
 def get_available_components() -> list[str]:
     """Read components defined in components directory."""
     return [f.stem for f in settings.COMPONENTS_DIR.glob("*.yaml")]
 
 
-def load_component(component_name: str) -> dict[str, Any]:
-    """Read component yaml file."""
-    with (settings.COMPONENTS_DIR / f"{component_name}.yaml").open("r") as f:
-        return yaml.safe_load(f)
+class ResourceBuilder:
+    """Class to create empty resource from predefined component."""
+
+    def __init__(
+        self,
+        package: PackageBuilder,
+        component_name: str,
+        resource_name: str,
+        selected_attributes: list[str],
+        sequences: list[str] | None = None,
+    ) -> None:
+        """Init resource builder."""
+        self.package = package
+        self.component: Component = Component.from_name(component_name)
+        self.resource_name: str = resource_name
+        self.sequences: list[str] = sequences if sequences else []
+        self.fields: dict[str, dict[str, Any]] = {}
+        self.add_fields(selected_attributes)
+
+    def add_fields(self, selected_attributes: list[str]) -> None:
+        """Add fields to resource."""
+        for attr_name in selected_attributes:
+            if attr_name not in self.component.attributes:
+                raise KeyError(
+                    f"Attribute {attr_name} not found in component {self.component.name}.",
+                )
+
+            attr_info = self.component.attributes[attr_name]
+
+            if attr_name in self.sequences + self.component.sequences:
+                field_type = "string"
+            else:
+                field_type = attr_info.get("type", "string")
+
+            self.fields[attr_name] = {
+                "name": attr_name,
+                "type": FRICTIONLESS_MAPPING.get(field_type, field_type),
+                "description": attr_info.get("description", ""),
+                "custom": {"unit": attr_info.get("unit", "")},
+            }
+
+    @property
+    def foreign_keys(self) -> list[dict]:
+        """Return foreign keys for busses and profiles in resource."""
+        sequences = set(self.component.sequences + self.sequences)
+        fks = []
+        for bus in self.component.busses:
+            fks.append(  # noqa: PERF401
+                {
+                    "fields": bus,
+                    "reference": {"resource": "bus", "fields": "name"},
+                },
+            )
+        for sequence in sequences:
+            fks.append(  # noqa: PERF401
+                {
+                    "fields": sequence,
+                    "reference": {"resource": f"{self.component.name}_profile"},
+                },
+            )
+        return fks
+
+    @property
+    def path(self) -> Path:
+        """Return relative path of resource."""
+        return Path(f"data/elements/{self.resource_name}.csv")
+
+    @property
+    def full_path(self) -> Path:
+        """Return full path of resource."""
+        return self.package.base_dir / self.path
+
+    def save(self) -> None:
+        """Save empty resource as CSV."""
+        headers = list(self.fields)
+        with self.full_path.open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
+
+    @property
+    def resource(self) -> Resource:
+        """Return frictionless resource."""
+        schema = Schema.from_descriptor(
+            {
+                "fields": list(self.fields.values()),
+                "primaryKey": "name",
+                "foreignKeys": self.foreign_keys,
+            },
+            allow_invalid=True,
+        )
+        return Resource(
+            path=str(self.path),
+            name=self.resource_name,
+            schema=schema,
+            description=f"Derived from component: {self.component.name}",
+        )
 
 
 class PackageBuilder:
@@ -38,41 +153,26 @@ class PackageBuilder:
         base_dir: str | Path = settings.DATAPACKAGE_DIR,
     ) -> None:
         """Initialize the package builder."""
-        self.package_name = package_name
-        self.base_dir = Path(base_dir) / package_name
-        self.resources = []
+        self.package_name: str = package_name
+        self.base_dir: Path = Path(base_dir) / package_name
+        self.resources: list[ResourceBuilder] = []
 
     def add_resource(
         self,
         component_name: str,
         resource_name: str,
         selected_attributes: list[str],
+        sequences: list[str] | None = None,
     ) -> None:
         """Add resource to package from component."""
-        component_data = load_component(component_name)
-        attributes = component_data.get("attributes", {})
-
-        fields: list[dict[str, Any]] = []
-        for attr_name in selected_attributes:
-            if attr_name not in attributes:
-                raise KeyError(
-                    f"Attribute {attr_name} not found in component {component_name}.",
-                )
-
-            attr_info = attributes[attr_name]
-            field_type = attr_info.get("type", "string")
-
-            fields.append(
-                {
-                    "name": attr_name,
-                    "type": FRICTIONLESS_MAPPING.get(field_type, field_type),
-                    "description": attr_info.get("description", ""),
-                    "custom": {"unit": attr_info.get("unit", "")},
-                },
-            )
-
         self.resources.append(
-            {"name": resource_name, "component": component_name, "fields": fields},
+            ResourceBuilder(
+                self,
+                component_name,
+                resource_name,
+                selected_attributes,
+                sequences,
+            ),
         )
 
     def save_package(self) -> None:
@@ -84,24 +184,8 @@ class PackageBuilder:
         package = Package()
         package.name = self.package_name
 
-        for res_info in self.resources:
-            res_name = res_info["name"]
-            csv_path = f"data/elements/{res_name}.csv"
-            full_csv_path = self.base_dir / csv_path
-
-            # Create empty CSV with headers
-            headers = [field["name"] for field in res_info["fields"]]
-            with full_csv_path.open("w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(headers)
-
-            schema = Schema.from_descriptor({"fields": res_info["fields"]})
-            resource = Resource(
-                path=csv_path,
-                name=res_name,
-                schema=schema,
-                description=f"Derived from component: {res_info['component']}",
-            )
-            package.add_resource(resource)
+        for resource in self.resources:
+            resource.save()
+            package.add_resource(resource.resource)
 
         package.to_json(str(self.base_dir / "datapackage.json"))

@@ -1,3 +1,13 @@
+
+busses:
+  - bus
+
+sequences:
+  - availability
+  - drive_power
+  - min_storage_level
+  - max_storage_level
+
 attributes:
   region:
     type: str

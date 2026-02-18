@@ -174,8 +174,6 @@ class DPBuilderApp(App):
         """Open the attribute selection screen for a component."""
         if not self.builder:
             return
-        component_data = builder.load_component(component_name)
-        attributes = component_data.get("attributes", {})
 
         def handle_result(result) -> None:  # noqa: ANN001
             if result:
@@ -184,8 +182,10 @@ class DPBuilderApp(App):
                 self.added_resources.append((resource_name, component_name))
                 self.update_resource_list()
 
+        component = builder.Component.from_name(component_name)
+
         self.push_screen(
-            AttributeSelectionScreen(component_name, attributes),
+            AttributeSelectionScreen(component_name, component.attributes),
             handle_result,
         )
 

@@ -1,3 +1,11 @@
+
+busses:
+  - fuel_bus
+  - electricity_bus
+  - heat_bus
+
+sequences:
+
 attributes:
   region:
     type: str
