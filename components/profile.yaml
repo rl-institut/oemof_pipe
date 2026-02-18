@@ -1,0 +1,5 @@
+attributes:
+  timeindex:
+    type: datetime
+    unit: n/a
+    description: Current timestep

@@ -1,0 +1,17 @@
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: "Name of the bus. Can be referred by other components."
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  balanced:
+    type: bool
+    unit: ''
+    description: Whether bus is balanced or not

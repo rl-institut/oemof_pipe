@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import yaml
 from pathlib import Path
 from typing import Any
@@ -16,6 +16,7 @@ FRICTIONLESS_MAPPING = {
     "float": "number",
     "int": "integer",
     "dict": "object",
+    "bool": "boolean",
 }
 
 
@@ -25,8 +26,8 @@ class Component:
 
     name: str
     attributes: dict[str, dict[str, str]]
-    busses: list[str]
-    sequences: list[str]
+    busses: list[str] = field(default_factory=list)
+    sequences: list[str] = field(default_factory=list)
 
     @classmethod
     def from_name(cls, component_name: str) -> Component:
@@ -56,12 +57,19 @@ class ResourceBuilder:
         resource_name: str,
         selected_attributes: list[str],
         sequences: list[str] | None = None,
+        *,
+        is_sequence: bool = False,
     ) -> None:
         """Init resource builder."""
         self.package = package
         self.component: Component = Component.from_name(component_name)
         self.resource_name: str = resource_name
-        self.sequences: list[str] = sequences if sequences else []
+        self.is_sequence: bool = is_sequence
+        self.sequences: set[str] = (
+            set(self.component.sequences + sequences)
+            if sequences
+            else set(self.component.sequences)
+        )
         self.fields: dict[str, dict[str, Any]] = {}
         self.add_fields(selected_attributes)
 
@@ -74,11 +82,11 @@ class ResourceBuilder:
                 )
 
             attr_info = self.component.attributes[attr_name]
-
-            if attr_name in self.sequences + self.component.sequences:
-                field_type = "string"
-            else:
-                field_type = attr_info.get("type", "string")
+            field_type = (
+                "string"
+                if attr_name in self.sequences
+                else attr_info.get("type", "string")
+            )
 
             self.fields[attr_name] = {
                 "name": attr_name,
@@ -90,7 +98,6 @@ class ResourceBuilder:
     @property
     def foreign_keys(self) -> list[dict]:
         """Return foreign keys for busses and profiles in resource."""
-        sequences = set(self.component.sequences + self.sequences)
         fks = []
         for bus in self.component.busses:
             fks.append(  # noqa: PERF401
@@ -99,7 +106,7 @@ class ResourceBuilder:
                     "reference": {"resource": "bus", "fields": "name"},
                 },
             )
-        for sequence in sequences:
+        for sequence in self.sequences:
             fks.append(  # noqa: PERF401
                 {
                     "fields": sequence,
@@ -111,7 +118,9 @@ class ResourceBuilder:
     @property
     def path(self) -> Path:
         """Return relative path of resource."""
-        return Path(f"data/elements/{self.resource_name}.csv")
+        return Path(
+            f"data/{'sequences' if self.is_sequence else 'elements'}/{self.resource_name}.csv",
+        )
 
     @property
     def full_path(self) -> Path:
@@ -122,7 +131,7 @@ class ResourceBuilder:
         """Save empty resource as CSV."""
         headers = list(self.fields)
         with self.full_path.open("w", newline="") as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter=";")
             writer.writerow(headers)
 
     @property
@@ -131,7 +140,7 @@ class ResourceBuilder:
         schema = Schema.from_descriptor(
             {
                 "fields": list(self.fields.values()),
-                "primaryKey": "name",
+                "primaryKey": "timeindex" if self.is_sequence else "name",
                 "foreignKeys": self.foreign_keys,
             },
             allow_invalid=True,
@@ -157,6 +166,9 @@ class PackageBuilder:
         self.base_dir: Path = Path(base_dir) / package_name
         self.resources: list[ResourceBuilder] = []
 
+        # Add default bus resource
+        self.add_resource("bus", "bus", ["name", "region", "type", "balanced"])
+
     def add_resource(
         self,
         component_name: str,
@@ -178,8 +190,10 @@ class PackageBuilder:
     def save_package(self) -> None:
         """Save datapackage to datapackage directory."""
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        data_dir = self.base_dir / "data" / "elements"
-        data_dir.mkdir(parents=True, exist_ok=True)
+        elements_dir = self.base_dir / "data" / "elements"
+        elements_dir.mkdir(parents=True, exist_ok=True)
+        sequences_dir = self.base_dir / "data" / "sequences"
+        sequences_dir.mkdir(parents=True, exist_ok=True)
 
         package = Package()
         package.name = self.package_name
@@ -187,5 +201,17 @@ class PackageBuilder:
         for resource in self.resources:
             resource.save()
             package.add_resource(resource.resource)
+
+            # Add resource for timeseries if at least one sequence is present
+            if resource.sequences:
+                profile = ResourceBuilder(
+                    self,
+                    "profile",
+                    f"{resource.resource_name}_profile",
+                    ["timeindex"],
+                    is_sequence=True,
+                )
+                profile.save()
+                package.add_resource(profile.resource)
 
         package.to_json(str(self.base_dir / "datapackage.json"))

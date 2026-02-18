@@ -15,6 +15,7 @@ dependencies = [
 output-format = "concise"  # This enables file-links to errors in git console
 line-length = 120
 lint.select = ["ALL"]
+lint.pylint.max-args = 7
 lint.ignore = [
   "I001",    # Import block is un-sorted or un-formatted (done by isort)
   "D203",    # 1 blank line required before class docstring
