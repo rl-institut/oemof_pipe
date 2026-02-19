@@ -117,7 +117,7 @@ class DPBuilderApp(App):
     def __init__(self) -> None:
         """Initialize the application."""
         super().__init__()
-        self.builder = None
+        self.builder: builder.PackageBuilder = None
         self.added_resources = []
 
     def on_mount(self) -> None:
@@ -205,7 +205,7 @@ class DPBuilderApp(App):
         """Handle button press events."""
         if event.button.id == "save_btn":
             if self.builder:
-                self.builder.add_sequences()
+                self.builder.infer_sequences_from_resources()
                 self.builder.save_package()
                 self.notify(
                     f"Package saved to datapackages/{self.builder.package_name}",

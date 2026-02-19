@@ -175,7 +175,7 @@ class PackageBuilder:
         """Add resource to package from component."""
         self.resources.append(resource)
 
-    def add_sequences(self) -> None:
+    def infer_sequences_from_resources(self) -> None:
         """Add sequences based on attached resources to package."""
         for resource in self.resources:
             # Add resource for timeseries if at least one sequence is present
