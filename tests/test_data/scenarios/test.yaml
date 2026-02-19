@@ -1,0 +1,18 @@
+components:
+  electricity_demand:
+    component: load
+    attributes:
+      - region
+      - amount
+    instances:
+      - region: "BB"
+      - region: "B"
+        amount: 50
+  liion_storage:
+    component: storage
+    attributes:
+      - region
+      - capacity
+    instances:
+      - region: "BB"
+        capacity: 100

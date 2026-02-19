@@ -12,3 +12,6 @@ COMPONENTS_DIR = pathlib.Path(
 DATAPACKAGE_DIR = pathlib.Path(
     os.environ.get("DATAPACKAGE_DIR", pathlib.Path.cwd() / "datapackages"),
 )
+SCENARIO_DIR = pathlib.Path(
+    os.environ.get("SCENARIO_DIR", pathlib.Path.cwd() / "scenarios"),
+)
