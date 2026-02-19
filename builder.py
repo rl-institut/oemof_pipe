@@ -52,7 +52,6 @@ class ResourceBuilder:
 
     def __init__(
         self,
-        package: PackageBuilder,
         component_name: str,
         resource_name: str,
         selected_attributes: list[str],
@@ -61,7 +60,6 @@ class ResourceBuilder:
         is_sequence: bool = False,
     ) -> None:
         """Init resource builder."""
-        self.package = package
         self.component: Component = Component.from_name(component_name)
         self.resource_name: str = resource_name
         self.is_sequence: bool = is_sequence
@@ -122,15 +120,11 @@ class ResourceBuilder:
             f"data/{'sequences' if self.is_sequence else 'elements'}/{self.resource_name}.csv",
         )
 
-    @property
-    def full_path(self) -> Path:
-        """Return full path of resource."""
-        return self.package.base_dir / self.path
-
-    def save(self) -> None:
+    def save(self, package_path: Path) -> None:
         """Save empty resource as CSV."""
+        full_path = package_path / self.path
         headers = list(self.fields)
-        with self.full_path.open("w", newline="") as f:
+        with full_path.open("w", newline="") as f:
             writer = csv.writer(f, delimiter=";")
             writer.writerow(headers)
 
@@ -179,7 +173,6 @@ class PackageBuilder:
         """Add resource to package from component."""
         self.resources.append(
             ResourceBuilder(
-                self,
                 component_name,
                 resource_name,
                 selected_attributes,
@@ -199,19 +192,18 @@ class PackageBuilder:
         package.name = self.package_name
 
         for resource in self.resources:
-            resource.save()
+            resource.save(self.base_dir)
             package.add_resource(resource.resource)
 
             # Add resource for timeseries if at least one sequence is present
             if resource.sequences:
                 profile = ResourceBuilder(
-                    self,
                     "profile",
                     f"{resource.resource_name}_profile",
                     ["timeindex"],
                     is_sequence=True,
                 )
-                profile.save()
+                profile.save(self.base_dir)
                 package.add_resource(profile.resource)
 
         package.to_json(str(self.base_dir / "datapackage.json"))
