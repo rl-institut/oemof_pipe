@@ -131,19 +131,18 @@ def apply_scenario_data(
             f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",  # noqa: S608
         )
 
-        update_cols = _get_update_columns(con, source_table)
+        # Check if there are any matches for this resource
+        has_matches = (
+            con.execute(
+                f"SELECT COUNT(*) FROM resource_table "  # noqa: S608
+                f"JOIN {source_table} ON resource_table.name = {source_table}.name",
+            ).fetchone()[0]
+            > 0
+        )
 
-        if update_cols:
-            # Check if there are any matches for this resource
-            has_matches = (
-                con.execute(
-                    f"SELECT COUNT(*) FROM resource_table "  # noqa: S608
-                    f"JOIN {source_table} ON resource_table.name = {source_table}.name",
-                ).fetchone()[0]
-                > 0
-            )
-
-            if has_matches:
+        if has_matches:
+            update_cols = _get_update_columns(con, source_table)
+            if update_cols:
                 set_clause = ", ".join(
                     [f"{col} = {source_table}.{col}" for col in update_cols],
                 )
