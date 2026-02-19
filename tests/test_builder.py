@@ -23,7 +23,7 @@ def test_add_resource_and_save(tmp_path: pathlib.Path) -> None:
         "electricity_demand",
         ["region", "amount"],
     )
-    resource.add_instance({"region": "BB", "amount": 100})
+    resource.add_instance({"name": "d1", "region": "BB", "amount": 100})
     builder.add_resource(resource)
 
     builder.save_package()
@@ -39,13 +39,14 @@ def test_add_resource_and_save(tmp_path: pathlib.Path) -> None:
         assert len(data["resources"]) == 3  # noqa: PLR2004
 
         res1 = next(r for r in data["resources"] if r["name"] == "electricity_demand")
-        assert len(res1["schema"]["fields"]) == 3  # noqa: PLR2004
+        assert len(res1["schema"]["fields"]) == 4  # noqa: PLR2004
         assert res1["schema"]["fields"][0]["name"] == "region"
         assert res1["schema"]["fields"][1]["name"] == "amount"
         assert res1["schema"]["fields"][2]["name"] == "type"
+        assert res1["schema"]["fields"][3]["name"] == "name"
 
     with (pkg_dir / "data/elements/electricity_demand.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 2  # noqa: PLR2004
-        assert lines[0].strip() == "region;amount;type"
-        assert lines[1].strip() == "BB;100;load"
+        assert lines[0].strip() == "region;amount;type;name"
+        assert lines[1].strip() == "BB;100;load;d1"

@@ -19,6 +19,8 @@ FRICTIONLESS_MAPPING = {
     "bool": "boolean",
 }
 
+REQUIRED_FIELDS = ("type", "name")
+
 
 @dataclass
 class Component:
@@ -96,8 +98,10 @@ class ResourceBuilder:
         self.instances: list[dict] = []
 
         # Always add column "type" to element resources
-        if not self.is_sequence and "type" not in selected_attributes:
-            selected_attributes.append("type")
+        if not self.is_sequence:
+            for attr in REQUIRED_FIELDS:
+                if attr not in selected_attributes:
+                    selected_attributes.append(attr)
         for field_name in selected_attributes:
             self.add_field(field_name)
 
@@ -124,6 +128,9 @@ class ResourceBuilder:
 
     def add_instance(self, data: dict) -> None:
         """Add instance (data row) to resource."""
+        if "name" not in data:
+            error_msg = "Missing 'name' in data."
+            raise ValueError(error_msg)
         if "type" not in data:
             # Set data type automatically if not set
             data["type"] = self.component.name

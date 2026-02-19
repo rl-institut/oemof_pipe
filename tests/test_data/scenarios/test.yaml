@@ -5,8 +5,10 @@ components:
       - region
       - amount
     instances:
-      - region: "BB"
-      - region: "B"
+      - name: "l1"
+        region: "BB"
+      - name: "l2"
+        region: "B"
         amount: 50
   liion_storage:
     component: storage
@@ -14,5 +16,6 @@ components:
       - region
       - capacity
     instances:
-      - region: "BB"
+      - name: "liion"
+        region: "BB"
         capacity: 100
