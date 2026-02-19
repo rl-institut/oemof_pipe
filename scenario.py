@@ -3,7 +3,7 @@
 import yaml
 from pathlib import Path
 import settings
-from builder import PackageBuilder, ResourceBuilder
+from builder import PackageBuilder, ResourceBuilder, Component
 
 
 def load_scenario(
@@ -21,8 +21,10 @@ def load_scenario(
     components = scenario_data.get("components", {})
     for res_name, config in components.items():
         component_type = config.get("component")
-        attributes = config.get("attributes", [])
         instances = config.get("instances", [])
+        attributes = config.get("attributes", [])
+        if len(attributes) == 0:
+            attributes = Component.from_name(component_type).attributes
 
         # Create resource builder
         resource = ResourceBuilder(
@@ -37,4 +39,9 @@ def load_scenario(
 
         builder.add_resource(resource)
 
+    builder.infer_sequences_from_resources()
     builder.save_package()
+
+
+if __name__ == "__main__":
+    load_scenario("bbb")
