@@ -30,9 +30,13 @@ class Component:
     sequences: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_name(cls, component_name: str) -> Component:
+    def from_name(
+        cls,
+        component_name: str,
+        component_dir: Path = settings.COMPONENTS_DIR,
+    ) -> Component:
         """Create component looking up name in components directory."""
-        with (settings.COMPONENTS_DIR / f"{component_name}.yaml").open("r") as f:
+        with (component_dir / f"{component_name}.yaml").open("r") as f:
             data = yaml.safe_load(f)
         return cls(
             name=component_name,
@@ -42,9 +46,11 @@ class Component:
         )
 
 
-def get_available_components() -> list[str]:
+def get_available_components(
+    component_dir: Path = settings.COMPONENTS_DIR,
+) -> list[str]:
     """Read components defined in components directory."""
-    return [f.stem for f in settings.COMPONENTS_DIR.glob("*.yaml")]
+    return [f.stem for f in component_dir.glob("*.yaml")]
 
 
 def map_to_frictionless_resource(resource: ResourceBuilder) -> Resource:
