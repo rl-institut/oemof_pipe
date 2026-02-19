@@ -41,8 +41,8 @@ class Component:
         return cls(
             name=component_name,
             attributes=data.get("attributes", {}),
-            busses=data.get("busses", []),
-            sequences=data.get("sequences", []),
+            busses=data.get("busses", []) or [],
+            sequences=data.get("sequences", []) or [],
         )
 
 
@@ -93,29 +93,54 @@ class ResourceBuilder:
             else set(self.component.sequences)
         )
         self.fields: dict[str, dict[str, Any]] = {}
-        self.add_fields(selected_attributes)
+        self.instances: list[dict] = []
 
-    def add_fields(self, selected_attributes: list[str]) -> None:
-        """Add fields to resource."""
-        for attr_name in selected_attributes:
-            if attr_name not in self.component.attributes:
-                raise KeyError(
-                    f"Attribute {attr_name} not found in component {self.component.name}.",
-                )
+        # Always add column "type" to element resources
+        if not self.is_sequence and "type" not in selected_attributes:
+            selected_attributes.append("type")
+        for field_name in selected_attributes:
+            self.add_field(field_name)
 
-            attr_info = self.component.attributes[attr_name]
-            field_type = (
-                "string"
-                if attr_name in self.sequences
-                else attr_info.get("type", "string")
+    def add_field(self, field_name: str) -> None:
+        """Add field to resource."""
+        if field_name not in self.component.attributes:
+            raise KeyError(
+                f"Attribute {field_name} not found in component {self.component.name}.",
             )
 
-            self.fields[attr_name] = {
-                "name": attr_name,
-                "type": FRICTIONLESS_MAPPING.get(field_type, field_type),
-                "description": attr_info.get("description", ""),
-                "custom": {"unit": attr_info.get("unit", "")},
-            }
+        attr_info = self.component.attributes[field_name]
+        field_type = (
+            "string"
+            if field_name in self.sequences
+            else attr_info.get("type", "string")
+        )
+
+        self.fields[field_name] = {
+            "name": field_name,
+            "type": FRICTIONLESS_MAPPING.get(field_type, field_type),
+            "description": attr_info.get("description", ""),
+            "custom": {"unit": attr_info.get("unit", "")},
+        }
+
+    def add_instance(self, data: dict) -> None:
+        """Add instance (data row) to resource."""
+        if "type" not in data:
+            # Set data type automatically if not set
+            data["type"] = self.component.name
+
+        # Check type column consistency
+        if data["type"] != self.component.name:
+            raise ValueError(
+                f"Type ('{data['type']}') cannot be different from component type ('{self.component.name}').",
+            )
+
+        # Check if all data fields match
+        for key in data:
+            if key not in self.fields:
+                raise KeyError(
+                    f"Attribute {key} not found in resource. Possible attributes are: {list(self.fields)}.",
+                )
+        self.instances.append(data)
 
     @property
     def foreign_keys(self) -> list[dict]:
@@ -151,6 +176,9 @@ class ResourceBuilder:
         with full_path.open("w", newline="") as f:
             writer = csv.writer(f, delimiter=";")
             writer.writerow(headers)
+            for instance in self.instances:
+                row = [instance.get(attr, "") for attr in self.fields]
+                writer.writerow(row)
 
 
 class PackageBuilder:
