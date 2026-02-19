@@ -178,7 +178,12 @@ class DPBuilderApp(App):
         def handle_result(result) -> None:  # noqa: ANN001
             if result:
                 resource_name, selected_attrs = result
-                self.builder.add_resource(component_name, resource_name, selected_attrs)
+                resource = builder.ResourceBuilder(
+                    component_name,
+                    resource_name,
+                    selected_attrs,
+                )
+                self.builder.add_resource(resource)
                 self.added_resources.append((resource_name, component_name))
                 self.update_resource_list()
 
@@ -200,6 +205,7 @@ class DPBuilderApp(App):
         """Handle button press events."""
         if event.button.id == "save_btn":
             if self.builder:
+                self.builder.add_sequences()
                 self.builder.save_package()
                 self.notify(
                     f"Package saved to datapackages/{self.builder.package_name}",

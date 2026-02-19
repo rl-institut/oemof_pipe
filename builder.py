@@ -47,6 +47,24 @@ def get_available_components() -> list[str]:
     return [f.stem for f in settings.COMPONENTS_DIR.glob("*.yaml")]
 
 
+def map_to_frictionless_resource(resource: ResourceBuilder) -> Resource:
+    """Map resource to frictionless resource."""
+    schema = Schema.from_descriptor(
+        {
+            "fields": list(resource.fields.values()),
+            "primaryKey": "timeindex" if resource.is_sequence else "name",
+            "foreignKeys": resource.foreign_keys,
+        },
+        allow_invalid=True,
+    )
+    return Resource(
+        path=str(resource.path),
+        name=resource.name,
+        schema=schema,
+        description=f"Derived from component: {resource.component.name}",
+    )
+
+
 class ResourceBuilder:
     """Class to create empty resource from predefined component."""
 
@@ -61,7 +79,7 @@ class ResourceBuilder:
     ) -> None:
         """Init resource builder."""
         self.component: Component = Component.from_name(component_name)
-        self.resource_name: str = resource_name
+        self.name: str = resource_name
         self.is_sequence: bool = is_sequence
         self.sequences: set[str] = (
             set(self.component.sequences + sequences)
@@ -117,7 +135,7 @@ class ResourceBuilder:
     def path(self) -> Path:
         """Return relative path of resource."""
         return Path(
-            f"data/{'sequences' if self.is_sequence else 'elements'}/{self.resource_name}.csv",
+            f"data/{'sequences' if self.is_sequence else 'elements'}/{self.name}.csv",
         )
 
     def save(self, package_path: Path) -> None:
@@ -127,24 +145,6 @@ class ResourceBuilder:
         with full_path.open("w", newline="") as f:
             writer = csv.writer(f, delimiter=";")
             writer.writerow(headers)
-
-    @property
-    def resource(self) -> Resource:
-        """Return frictionless resource."""
-        schema = Schema.from_descriptor(
-            {
-                "fields": list(self.fields.values()),
-                "primaryKey": "timeindex" if self.is_sequence else "name",
-                "foreignKeys": self.foreign_keys,
-            },
-            allow_invalid=True,
-        )
-        return Resource(
-            path=str(self.path),
-            name=self.resource_name,
-            schema=schema,
-            description=f"Derived from component: {self.component.name}",
-        )
 
 
 class PackageBuilder:
@@ -161,24 +161,27 @@ class PackageBuilder:
         self.resources: list[ResourceBuilder] = []
 
         # Add default bus resource
-        self.add_resource("bus", "bus", ["name", "region", "type", "balanced"])
-
-    def add_resource(
-        self,
-        component_name: str,
-        resource_name: str,
-        selected_attributes: list[str],
-        sequences: list[str] | None = None,
-    ) -> None:
-        """Add resource to package from component."""
-        self.resources.append(
-            ResourceBuilder(
-                component_name,
-                resource_name,
-                selected_attributes,
-                sequences,
-            ),
+        self.add_resource(
+            ResourceBuilder("bus", "bus", ["name", "region", "type", "balanced"]),
         )
+
+    def add_resource(self, resource: ResourceBuilder) -> None:
+        """Add resource to package from component."""
+        self.resources.append(resource)
+
+    def add_sequences(self) -> None:
+        """Add sequences based on attached resources to package."""
+        for resource in self.resources:
+            # Add resource for timeseries if at least one sequence is present
+            if resource.sequences:
+                self.add_resource(
+                    ResourceBuilder(
+                        "profile",
+                        f"{resource.name}_profile",
+                        ["timeindex"],
+                        is_sequence=True,
+                    ),
+                )
 
     def save_package(self) -> None:
         """Save datapackage to datapackage directory."""
@@ -193,17 +196,6 @@ class PackageBuilder:
 
         for resource in self.resources:
             resource.save(self.base_dir)
-            package.add_resource(resource.resource)
-
-            # Add resource for timeseries if at least one sequence is present
-            if resource.sequences:
-                profile = ResourceBuilder(
-                    "profile",
-                    f"{resource.resource_name}_profile",
-                    ["timeindex"],
-                    is_sequence=True,
-                )
-                profile.save(self.base_dir)
-                package.add_resource(profile.resource)
+            package.add_resource(map_to_frictionless_resource(resource))
 
         package.to_json(str(self.base_dir / "datapackage.json"))
