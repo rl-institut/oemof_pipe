@@ -3,6 +3,7 @@
 import os
 import pathlib
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
 
@@ -15,3 +16,5 @@ DATAPACKAGE_DIR = pathlib.Path(
 SCENARIO_DIR = pathlib.Path(
     os.environ.get("SCENARIO_DIR", pathlib.Path.cwd() / "scenarios"),
 )
+
+logger.level("DEBUG")

@@ -5,6 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "frictionless>=5.18.1",
+    "loguru>=0.7.3",
     "python-dotenv>=1.2.1",
     "textual-dev>=1.8.0",
     "textual[syntax]>=8.0.0",

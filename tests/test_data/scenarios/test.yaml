@@ -12,9 +12,6 @@ components:
         amount: 50
   liion_storage:
     component: storage
-    attributes:
-      - region
-      - capacity
     instances:
       - name: "liion"
         region: "BB"
