@@ -145,8 +145,9 @@ def _get_update_columns(
 def apply_element_data(
     data_path: Path | str,
     datapackage_name: str,
-    scenario_key: str,
+    scenario: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    scenario_column: str = "scenario",
     var_name_col: str = "var_name",
     var_value_col: str = "var_value",
 ) -> None:
@@ -159,7 +160,7 @@ def apply_element_data(
     # Register data CSV as a table and filter by scenario
     con.execute(
         f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "  # noqa: S608
-        f"WHERE scenario = '{scenario_key}' OR scenario = 'ALL'",
+        f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
     )
 
     # Check if raw_table contains var_name and var_value columns
