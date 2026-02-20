@@ -1,0 +1,42 @@
+timeindex:
+  start: 2016-01-01 00:00:00
+  periods: 8760
+
+regions:
+  - BB
+  - B
+
+elements:
+  electricity_demand:
+    component: load
+    attributes:
+      - amount
+    instances:
+      - name: "d1"
+      - name: "d2"
+        amount: 50
+  heat_demand:
+    component: load
+    regions:
+    attributes:
+      - amount
+    instances:
+      - name: "h1"
+      - name: "h2"
+        amount: 60
+  liion_storage:
+    component: storage
+    regions:
+      - B
+    sequences:
+      - efficiency
+      - loss_rate
+    instances:
+      - name: "liion"
+        capacity: 100
+
+sequences:
+  liion_storage_profile:
+    columns:
+      - efficiency
+      - loss_rate

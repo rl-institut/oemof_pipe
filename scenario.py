@@ -39,6 +39,7 @@ def create_scenario(
 
 def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
     """Add elements from scenario data to package builder."""
+    regions = scenario_data.get("regions")
     elements = scenario_data.get("elements", {})
     for res_name, config in elements.items():
         component_type = config.get("component")
@@ -47,6 +48,9 @@ def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
         attributes = config.get("attributes", [])
         if len(attributes) == 0:
             attributes = Component.from_name(component_type).attributes
+
+        if regions and "region" not in attributes:
+            attributes.append("region")
 
         # Create resource builder
         resource = ElementResourceBuilder(
@@ -57,8 +61,18 @@ def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
         )
 
         # Add all instances to resource
-        for instance in instances:
-            resource.add_instance(instance)
+        instance_regions = config.get("regions", regions)
+        if instance_regions is None:
+            # Instances are region-independent
+            for instance in instances:
+                resource.add_instance(instance)
+        else:
+            for instance in instances:
+                for region in instance_regions:
+                    data = instance.copy()
+                    data["region"] = region
+                    data["name"] = f"{region}-{data['name']}"
+                    resource.add_instance(data)
 
         builder.add_resource(resource)
 
@@ -247,7 +261,7 @@ def apply_sequence_data(
 
 
 if __name__ == "__main__":
-    create_scenario("test")
-    apply_element_data("raw/single.csv", "test", "test")
-    apply_element_data("raw/multiple.csv", "test", "test")
-    apply_sequence_data("raw/timeseries.csv", "test", "liion_storage_profile")
+    create_scenario("regions")
+    apply_element_data("raw/single.csv", "regions", "test")
+    apply_element_data("raw/multiple.csv", "regions", "test")
+    apply_sequence_data("raw/timeseries.csv", "regions", "liion_storage_profile")

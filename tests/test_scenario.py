@@ -47,6 +47,69 @@ def test_load_scenario(tmp_path: Path) -> None:
         assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
 
 
+def test_regions_scenario(tmp_path: Path) -> None:
+    """Load the region scenario from test scenarios folder and create datapackage."""
+    # Setup temporary directories
+    pkg_dir = tmp_path / "datapackages"
+    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
+
+    create_scenario("regions", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+
+    # Verify output
+    expected_pkg_path = pkg_dir / "regions"
+    assert (expected_pkg_path / "datapackage.json").exists()
+    assert (expected_pkg_path / "data/elements/bus.csv").exists()
+    assert (expected_pkg_path / "data/elements/electricity_demand.csv").exists()
+    assert (expected_pkg_path / "data/elements/heat_demand.csv").exists()
+    assert (expected_pkg_path / "data/elements/liion_storage.csv").exists()
+    assert (
+        expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
+    ).exists()
+    assert (expected_pkg_path / "data/sequences/heat_demand_profile.csv").exists()
+    assert (expected_pkg_path / "data/sequences/liion_storage_profile.csv").exists()
+
+    with (expected_pkg_path / "datapackage.json").open("r") as f:
+        data = json.load(f)
+        assert data["name"] == "regions"
+        assert len(data["resources"]) == 7  # noqa: PLR2004
+
+    with (expected_pkg_path / "data/elements/electricity_demand.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 5  # noqa: PLR2004
+        assert lines[0].strip() == "amount;region;type;name"
+        assert lines[1].strip() == ";BB;load;BB-d1"
+        assert lines[2].strip() == ";B;load;B-d1"
+        assert lines[3].strip() == "50;BB;load;BB-d2"
+        assert lines[4].strip() == "50;B;load;B-d2"
+
+    with (expected_pkg_path / "data/elements/heat_demand.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # noqa: PLR2004
+        assert lines[0].strip() == "amount;region;type;name"
+        assert lines[1].strip() == ";;load;h1"
+        assert lines[2].strip() == "60;;load;h2"
+
+    with (expected_pkg_path / "data/elements/liion_storage.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 2  # noqa: PLR2004
+        assert "B-liion" in lines[1].strip()
+
+    with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        assert lines[0].strip() == "timeindex"
+
+    with (expected_pkg_path / "data/sequences/liion_storage_profile.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 8761  # noqa: PLR2004
+        assert lines[0].strip() == "timeindex;efficiency;loss_rate"
+        assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
+
+
 def test_apply_scenario_data_single(tmp_path: Path) -> None:
     """Test applying scenario data in single format."""
     pkg_dir = tmp_path / "datapackages"
