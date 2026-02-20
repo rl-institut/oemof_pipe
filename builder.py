@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass, field
 import yaml
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sized
 from frictionless import Package, Resource, Schema
 import csv
 import settings
@@ -20,6 +24,14 @@ FRICTIONLESS_MAPPING = {
 }
 
 REQUIRED_FIELDS = ("type", "name")
+
+
+def hourly_range(start: dt.datetime, periods: int) -> Iterator[dt.datetime]:
+    """Create hourly range."""
+    current = start
+    for _ in range(periods):
+        yield current
+        current += dt.timedelta(hours=1)
 
 
 @dataclass
@@ -59,9 +71,16 @@ def map_to_frictionless_resource(
     resource: ElementResourceBuilder | SequenceResourceBuilder,
 ) -> Resource:
     """Map resource to frictionless resource."""
+    fields = []
+    for field_data in resource.fields.values():
+        field_data["type"] = FRICTIONLESS_MAPPING.get(
+            field_data["type"],
+            field_data["type"],
+        )
+        fields.append(field_data)
     schema = Schema.from_descriptor(
         {
-            "fields": list(resource.fields.values()),
+            "fields": fields,
             "primaryKey": (
                 "timeindex" if isinstance(resource, SequenceResourceBuilder) else "name"
             ),
@@ -130,7 +149,7 @@ class ElementResourceBuilder:
 
         self.fields[field_name] = {
             "name": field_name,
-            "type": FRICTIONLESS_MAPPING.get(field_type, field_type),
+            "type": field_type,
             "description": attr_info.get("description", ""),
             "custom": {"unit": attr_info.get("unit", "")},
         }
@@ -200,7 +219,7 @@ class ElementResourceBuilder:
 class SequenceResourceBuilder:
     """Class to build sequence resources."""
 
-    def __init__(self, resource_name: str) -> None:
+    def __init__(self, resource_name: str, timeindex: Sized | None = None) -> None:
         """Init."""
         self.name: str = resource_name
         self.fields: dict[str, dict[str, Any]] = {
@@ -211,6 +230,26 @@ class SequenceResourceBuilder:
                 "description": "Current timestep",
             },
         }
+        self.timeindex = timeindex or list(
+            hourly_range(start=dt.datetime(2026, 1, 1), periods=8760),
+        )
+        self.instances: dict[str, Sized] = {}
+
+    def add_instance(self, name: str, timeseries: Sized) -> None:
+        """Add instance (data column) to resource."""
+        if len(timeseries) != len(self.timeindex):
+            error_msg = (
+                f"Timeseries length for column '{name}' does not match "
+                f"({len(timeseries)} != {len(self.timeindex)})."
+            )
+            raise IndexError(error_msg)
+        self.fields[name] = {
+            "name": name,
+            "type": "float",
+            "unit": "n/a",
+            "description": "Value for current timestep",
+        }
+        self.instances[name] = timeseries
 
     @property
     def path(self) -> Path:
@@ -226,6 +265,11 @@ class SequenceResourceBuilder:
         with full_path.open("w", newline="") as f:
             writer = csv.writer(f, delimiter=";")
             writer.writerow(headers)
+
+            # Do not iterate timeindex if no other columns are present
+            if len(self.instances) > 0:
+                for row in zip(self.timeindex, *self.instances.values()):
+                    writer.writerow(row)
 
 
 class PackageBuilder:

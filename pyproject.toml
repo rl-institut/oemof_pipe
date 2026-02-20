@@ -33,6 +33,7 @@ lint.ignore = [
   "G004",    # Logging statement uses f-string
   "PD011",   # Use `.to_numpy()` instead of `.values`  (does not work out of the box)
   "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+  "DTZ001",  # `datetime.datetime()` called without a `tzinfo` argument
 ]
 lint.unfixable = ["UP007", "I001"]
 exclude = [
