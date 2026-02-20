@@ -12,6 +12,9 @@ elements:
         amount: 50
   liion_storage:
     component: storage
+    sequences:
+      - efficiency
+      - loss_rate
     instances:
       - name: "liion"
         region: "BB"

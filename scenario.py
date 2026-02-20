@@ -27,6 +27,7 @@ def create_scenario(
     for res_name, config in elements.items():
         component_type = config.get("component")
         instances = config.get("instances", [])
+        sequences = config.get("sequences", [])
         attributes = config.get("attributes", [])
         if len(attributes) == 0:
             attributes = Component.from_name(component_type).attributes
@@ -36,6 +37,7 @@ def create_scenario(
             component_name=component_type,
             resource_name=res_name,
             selected_attributes=attributes,
+            sequences=sequences,
         )
 
         # Add all instances to resource
