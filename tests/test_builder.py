@@ -23,9 +23,11 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
     resource = ElementResourceBuilder(
         "load",
         "electricity_demand",
-        ["region", "amount"],
+        ["region", "amount", "bus"],
     )
-    resource.add_instance({"name": "d1", "region": "BB", "amount": 100})
+    resource.add_instance(
+        {"name": "d1", "region": "BB", "amount": 100, "bus": "electricity"},
+    )
     builder.add_resource(resource)
 
     builder.infer_sequences_from_resources()
@@ -44,17 +46,24 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
         assert len(data["resources"]) == 4  # noqa: PLR2004
 
         res1 = next(r for r in data["resources"] if r["name"] == "electricity_demand")
-        assert len(res1["schema"]["fields"]) == 4  # noqa: PLR2004
+        assert len(res1["schema"]["fields"]) == 5  # noqa: PLR2004
         assert res1["schema"]["fields"][0]["name"] == "region"
         assert res1["schema"]["fields"][1]["name"] == "amount"
-        assert res1["schema"]["fields"][2]["name"] == "type"
-        assert res1["schema"]["fields"][3]["name"] == "name"
+        assert res1["schema"]["fields"][2]["name"] == "bus"
+        assert res1["schema"]["fields"][3]["name"] == "type"
+        assert res1["schema"]["fields"][4]["name"] == "name"
+
+    with (pkg_dir / "data/elements/bus.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 2  # noqa: PLR2004
+        assert lines[0].strip() == "name;region;type;balanced"
+        assert lines[1].strip() == "electricity;;bus;"
 
     with (pkg_dir / "data/elements/electricity_demand.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 2  # noqa: PLR2004
-        assert lines[0].strip() == "region;amount;type;name"
-        assert lines[1].strip() == "BB;100;load;d1"
+        assert lines[0].strip() == "region;amount;bus;type;name"
+        assert lines[1].strip() == "BB;100;electricity;load;d1"
 
     with (pkg_dir / "data/sequences/electricity_demand_profile.csv").open("r") as f:
         lines = f.readlines()

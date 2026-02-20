@@ -261,7 +261,7 @@ def apply_sequence_data(
 
 
 if __name__ == "__main__":
-    create_scenario("regions")
+    create_scenario("test")
     apply_element_data("raw/single.csv", "regions", "test")
     apply_element_data("raw/multiple.csv", "regions", "test")
     apply_sequence_data("raw/timeseries.csv", "regions", "liion_storage_profile")

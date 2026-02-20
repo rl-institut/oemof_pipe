@@ -21,6 +21,7 @@ def test_load_scenario(tmp_path: Path) -> None:
     assert (expected_pkg_path / "datapackage.json").exists()
     assert (expected_pkg_path / "data/elements/electricity_demand.csv").exists()
     assert (expected_pkg_path / "data/elements/liion_storage.csv").exists()
+    assert (expected_pkg_path / "data/elements/chp.csv").exists()
     assert (
         expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
     ).exists()
@@ -29,7 +30,15 @@ def test_load_scenario(tmp_path: Path) -> None:
     with (expected_pkg_path / "datapackage.json").open("r") as f:
         data = json.load(f)
         assert data["name"] == "test"
-        assert len(data["resources"]) == 5  # noqa: PLR2004
+        assert len(data["resources"]) == 6  # noqa: PLR2004
+
+    with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 4  # noqa: PLR2004
+        assert lines[0].strip() == "name;region;type;balanced"
+        assert lines[1].strip() == "electricity;;bus;"
+        assert lines[2].strip() == "oil;;bus;"
+        assert lines[3].strip() == "heat;;bus;"
 
     with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
         "r",

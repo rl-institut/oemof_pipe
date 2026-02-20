@@ -25,6 +25,14 @@ elements:
       - name: "liion"
         region: "BB"
         capacity: 100
+  chp:
+    component: extraction
+    instances:
+      - name: "ex"
+        capacity: 100
+        fuel_bus: "oil"
+        electricity_bus: "electricity"
+        heat_bus: "heat"
 
 sequences:
   liion_storage_profile:

@@ -321,6 +321,19 @@ class PackageBuilder:
         else:
             bus = self.resources["bus"]
 
+        # Scan all ElementResourceBuilder instances
+        existing_bus_names = {inst["name"] for inst in bus.instances}
+        for resource in self.resources.values():
+            if not isinstance(resource, ElementResourceBuilder):
+                continue
+
+            for bus_fk in resource.component.busses:
+                for instance in resource.instances:
+                    bus_name = instance.get(bus_fk)
+                    if bus_name and bus_name not in existing_bus_names:
+                        bus.add_instance({"name": bus_name})
+                        existing_bus_names.add(bus_name)
+
     def save_package(self) -> None:
         """Save datapackage to datapackage directory."""
         self.base_dir.mkdir(parents=True, exist_ok=True)
