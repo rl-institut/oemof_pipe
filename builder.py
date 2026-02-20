@@ -197,7 +197,7 @@ class ElementResourceBuilder:
             fks.append(  # noqa: PERF401
                 {
                     "fields": sequence,
-                    "reference": {"resource": f"{self.component.name}_profile"},
+                    "reference": {"resource": f"{self.name}_profile"},
                 },
             )
         return fks

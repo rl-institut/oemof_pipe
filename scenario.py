@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
 import duckdb
 import yaml
 
@@ -30,9 +35,8 @@ def create_scenario(
     builder = PackageBuilder(scenario_name, datapackage_dir)
 
     _create_elements(builder, scenario_data)
-    _create_sequences(builder, scenario_data)
-
     builder.infer_sequences_from_resources()
+    _create_sequences(builder, scenario_data)
     builder.infer_busses_from_resources()
     builder.save_package()
 
@@ -43,11 +47,11 @@ def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
     elements = scenario_data.get("elements", {})
     for res_name, config in elements.items():
         component_type = config.get("component")
-        instances = config.get("instances", [])
+        component = Component.from_name(component_type)
         sequences = config.get("sequences", [])
         attributes = config.get("attributes", [])
         if len(attributes) == 0:
-            attributes = Component.from_name(component_type).attributes
+            attributes = component.attributes
 
         if regions and "region" not in attributes:
             attributes.append("region")
@@ -59,22 +63,49 @@ def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
             selected_attributes=attributes,
             sequences=sequences,
         )
-
-        # Add all instances to resource
-        instance_regions = config.get("regions", regions)
-        if instance_regions is None:
-            # Instances are region-independent
-            for instance in instances:
-                resource.add_instance(instance)
-        else:
-            for instance in instances:
-                for region in instance_regions:
-                    data = instance.copy()
-                    data["region"] = region
-                    data["name"] = f"{region}-{data['name']}"
-                    resource.add_instance(data)
+        _add_instances(resource, config, attributes, regions)
 
         builder.add_resource(resource)
+
+
+def _add_instances(
+    resource: ElementResourceBuilder,
+    config: dict,
+    attributes: list[str],
+    regions: list[str] | None,
+) -> None:
+    """Add all instances from scenario data to element resource."""
+
+    def add_default_sequence_foreign_keys(instance_data: dict) -> dict:
+        """Add default foreign keys to instance data."""
+        for sequence_field in set(sequences + component.sequences):
+            if sequence_field in instance_data or sequence_field not in attributes:
+                continue
+            instance_data[sequence_field] = f"{instance_data['name']}-profile"
+        return instance_data
+
+    component_type = config.get("component")
+    component = Component.from_name(component_type)
+    instances = config.get("instances", [])
+    sequences = config.get("sequences", [])
+
+    # Add all instances to resource
+    instance_regions = config.get("regions", regions)
+    if instance_regions is None:
+        # Instances are region-independent
+        for instance in instances:
+            instance_with_fks = add_default_sequence_foreign_keys(instance)
+            resource.add_instance(instance_with_fks)
+    else:
+        for instance in instances:
+            for region in instance_regions:
+                copied_instance = instance.copy()
+                copied_instance["region"] = region
+                copied_instance["name"] = f"{region}-{copied_instance['name']}"
+                instance_with_fks = add_default_sequence_foreign_keys(
+                    copied_instance,
+                )
+                resource.add_instance(instance_with_fks)
 
 
 def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:
@@ -88,6 +119,7 @@ def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:
         ),
     )
 
+    # Add sequences explicitly set in scenario file
     sequences = scenario_data.get("sequences", {})
     for res_name, config in sequences.items():
         # Create resource builder
@@ -100,6 +132,35 @@ def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:
                 resource.add_instance(column, [0 for _ in range(len(timeindex))])
 
         builder.add_resource(resource)
+
+    _add_default_profiles(builder, timeindex)
+
+
+def _add_default_profiles(builder: PackageBuilder, timeindex: list[datetime]) -> None:
+    """Add default sequences from resource instances."""
+    for resource in list(builder.resources.values()):
+        if isinstance(resource, SequenceResourceBuilder):
+            continue
+        sequences = set()
+        for foreign_key in resource.foreign_keys:
+            if foreign_key["reference"]["resource"] == "bus":
+                continue
+            column = foreign_key["fields"]
+            sequence_name = foreign_key["reference"]["resource"]
+            for instance in resource.instances:
+                if column not in instance:
+                    continue
+                sequences.add(instance[column])
+        if sequences:
+            for sequence in sequences:
+                if sequence_name not in builder.resources:
+                    builder.add_resource(
+                        SequenceResourceBuilder(sequence_name, timeindex),
+                    )
+                builder.resources[sequence_name].add_instance(
+                    sequence,
+                    [0 for _ in range(len(timeindex))],
+                )
 
 
 def _get_component_names_and_paths_from_datapackage(
