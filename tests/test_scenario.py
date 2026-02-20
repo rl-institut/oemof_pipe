@@ -4,7 +4,7 @@ import json
 import pathlib
 from pathlib import Path
 
-from scenario import create_scenario, apply_element_data
+from scenario import create_scenario, apply_element_data, apply_sequence_data
 import duckdb
 
 
@@ -102,3 +102,29 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
     ).fetchone()
     assert float(res[0]) == 0.9  # noqa: PLR2004
     assert float(res[1]) == 0.1  # noqa: PLR2004
+
+
+def test_apply_sequence_data(tmp_path: Path) -> None:
+    """Test applying sequence data to an existing datapackage."""
+    pkg_dir = tmp_path / "datapackages"
+    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
+    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+
+    data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "timeseries.csv"
+
+    apply_sequence_data(
+        data_path,
+        "test",
+        "liion_storage_profile",
+        datapackage_dir=pkg_dir,
+    )
+
+    csv_path = pkg_dir / "test" / "data/sequences/liion_storage_profile.csv"
+
+    con = duckdb.connect(database=":memory:")
+    res = con.execute(
+        f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') LIMIT 5",  # noqa: S608
+    ).fetchall()
+
+    assert float(res[0][0]) == 1.0
+    assert float(res[4][0]) == 5.0  # noqa: PLR2004

@@ -108,7 +108,10 @@ def _get_component_names_and_paths_from_datapackage(
     return name_to_path
 
 
-def _get_update_columns(con: duckdb.DuckDBPyConnection) -> list[str]:
+def _get_update_columns(
+    con: duckdb.DuckDBPyConnection,
+    excluded_columns: list[str],
+) -> list[str]:
     res_columns = [
         col[1] for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
     ]
@@ -120,7 +123,7 @@ def _get_update_columns(con: duckdb.DuckDBPyConnection) -> list[str]:
     update_cols = [
         col
         for col in source_columns
-        if col in res_columns and col not in ["name", "scenario", "id"]
+        if col in res_columns and col not in excluded_columns
     ]
     return update_cols
 
@@ -170,7 +173,11 @@ def apply_element_data(
             f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",  # noqa: S608
         )
 
-        update_cols = _get_update_columns(con)
+        # Find matching columns
+        update_cols = _get_update_columns(
+            con,
+            excluded_columns=["name", "scenario", "id"],
+        )
         if update_cols:
             set_clause = ", ".join(
                 [f"{col} = data_table.{col}" for col in update_cols],
@@ -187,7 +194,60 @@ def apply_element_data(
         con.execute("DROP TABLE IF EXISTS resource_table")
 
 
+def apply_sequence_data(
+    data_path: Path | str,
+    datapackage_name: str,
+    sequence_name: str,
+    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+) -> None:
+    """Apply scenario data from CSV to an existing datapackage."""
+    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
+    pkg = Package(pkg_path, allow_invalid=True)
+
+    # Find the resource by name
+    res = None
+    for resource in pkg.resources:
+        if resource.name == sequence_name:
+            res = resource
+            break
+
+    if res is None:
+        msg = f"Resource '{sequence_name}' not found in datapackage."
+        raise ValueError(msg)
+
+    res_full_path = datapackage_dir / datapackage_name / res.path
+
+    con = duckdb.connect(database=":memory:")
+
+    # Load source data
+    con.execute(
+        f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",  # noqa: S608
+    )
+
+    # Load existing resource data
+    con.execute(
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",  # noqa: S608
+    )
+
+    # Find matching columns
+    update_cols = _get_update_columns(con, excluded_columns=["timeindex"])
+    if update_cols:
+        set_clause = ", ".join(
+            [f"{col} = data_table.{col}" for col in update_cols],
+        )
+        con.execute(
+            f"UPDATE resource_table SET {set_clause} FROM data_table "  # noqa: S608
+            f"WHERE resource_table.timeindex = data_table.timeindex",
+        )
+
+        # Save back to CSV
+        con.execute(
+            f"COPY resource_table TO '{res_full_path}' (HEADER, DELIMITER ';')",
+        )
+
+
 if __name__ == "__main__":
     create_scenario("test")
     apply_element_data("raw/single.csv", "test", "test")
     apply_element_data("raw/multiple.csv", "test", "test")
+    apply_sequence_data("raw/timeseries.csv", "test", "liion_storage_profile")
