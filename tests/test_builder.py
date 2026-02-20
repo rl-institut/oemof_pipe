@@ -29,6 +29,7 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
     builder.add_resource(resource)
 
     builder.infer_sequences_from_resources()
+    builder.infer_busses_from_resources()
     builder.save_package()
 
     pkg_dir = test_dir / "test-pkg"
@@ -88,7 +89,7 @@ def test_add_sequence_resource_and_save(tmp_path: pathlib.Path) -> None:
     with (pkg_dir / "datapackage.json").open("r") as f:
         data = json.load(f)
         assert data["name"] == "test-pkg"
-        assert len(data["resources"]) == 3  # noqa: PLR2004
+        assert len(data["resources"]) == 2  # noqa: PLR2004
 
         res1 = next(
             r for r in data["resources"] if r["name"] == "electricity_demand_profile"

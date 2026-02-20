@@ -33,6 +33,7 @@ def create_scenario(
     _create_sequences(builder, scenario_data)
 
     builder.infer_sequences_from_resources()
+    builder.infer_busses_from_resources()
     builder.save_package()
 
 

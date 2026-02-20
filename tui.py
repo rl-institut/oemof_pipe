@@ -206,6 +206,7 @@ class DPBuilderApp(App):
         if event.button.id == "save_btn":
             if self.builder:
                 self.builder.infer_sequences_from_resources()
+                self.builder.infer_busses_from_resources()
                 self.builder.save_package()
                 self.notify(
                     f"Package saved to datapackages/{self.builder.package_name}",

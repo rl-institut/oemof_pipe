@@ -1,5 +1,6 @@
 """Module to test scenario generation."""
 
+import json
 import pathlib
 from pathlib import Path
 
@@ -24,6 +25,11 @@ def test_load_scenario(tmp_path: Path) -> None:
         expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
     ).exists()
     assert (expected_pkg_path / "data/sequences/liion_storage_profile.csv").exists()
+
+    with (expected_pkg_path / "datapackage.json").open("r") as f:
+        data = json.load(f)
+        assert data["name"] == "test"
+        assert len(data["resources"]) == 5  # noqa: PLR2004
 
     with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
         "r",

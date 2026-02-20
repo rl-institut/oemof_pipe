@@ -285,15 +285,6 @@ class PackageBuilder:
         self.base_dir: Path = Path(base_dir) / package_name
         self.resources: dict[str, ElementResourceBuilder | SequenceResourceBuilder] = {}
 
-        # Add default bus resource
-        self.add_resource(
-            ElementResourceBuilder(
-                "bus",
-                "bus",
-                ["name", "region", "type", "balanced"],
-            ),
-        )
-
     def add_resource(
         self,
         resource: ElementResourceBuilder | SequenceResourceBuilder,
@@ -316,6 +307,19 @@ class PackageBuilder:
                         f"{resource.name}_profile",
                     ),
                 )
+
+    def infer_busses_from_resources(self) -> None:
+        """Add buses based on attached resources to package."""
+        if "bus" not in self.resources:
+            # Add default bus resource
+            bus = ElementResourceBuilder(
+                "bus",
+                "bus",
+                ["name", "region", "type", "balanced"],
+            )
+            self.add_resource(bus)
+        else:
+            bus = self.resources["bus"]
 
     def save_package(self) -> None:
         """Save datapackage to datapackage directory."""
