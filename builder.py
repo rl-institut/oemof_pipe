@@ -283,7 +283,7 @@ class PackageBuilder:
         """Initialize the package builder."""
         self.package_name: str = package_name
         self.base_dir: Path = Path(base_dir) / package_name
-        self.resources: list[ElementResourceBuilder] = []
+        self.resources: dict[str, ElementResourceBuilder | SequenceResourceBuilder] = {}
 
         # Add default bus resource
         self.add_resource(
@@ -299,15 +299,18 @@ class PackageBuilder:
         resource: ElementResourceBuilder | SequenceResourceBuilder,
     ) -> None:
         """Add resource to package from component."""
-        self.resources.append(resource)
+        self.resources[resource.name] = resource
 
     def infer_sequences_from_resources(self) -> None:
         """Add sequences based on attached resources to package."""
-        for resource in self.resources:
+        for resource in list(self.resources.values()):
             if isinstance(resource, SequenceResourceBuilder):
                 continue
             # Add resource for timeseries if at least one sequence is present
             if resource.sequences:
+                if f"{resource.name}_profile" in self.resources:
+                    # Do not add sequence automatically if sequence with same name exists
+                    continue
                 self.add_resource(
                     SequenceResourceBuilder(
                         f"{resource.name}_profile",
@@ -325,7 +328,7 @@ class PackageBuilder:
         package = Package()
         package.name = self.package_name
 
-        for resource in self.resources:
+        for resource in self.resources.values():
             resource.save(self.base_dir)
             package.add_resource(map_to_frictionless_resource(resource))
 
