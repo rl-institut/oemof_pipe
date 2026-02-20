@@ -25,6 +25,8 @@ FRICTIONLESS_MAPPING = {
 
 REQUIRED_FIELDS = ("type", "name")
 
+DEFAULT_BUS_INSTANCE = {"balanced": True}
+
 
 def hourly_range(start: dt.datetime, periods: int) -> Iterator[dt.datetime]:
     """Create hourly range."""
@@ -112,7 +114,7 @@ class ElementResourceBuilder:
         self,
         component_name: str,
         resource_name: str,
-        selected_attributes: list[str],
+        selected_attributes: list[str] | None = None,
         sequences: list[str] | None = None,
     ) -> None:
         """Init element resource builder."""
@@ -125,6 +127,9 @@ class ElementResourceBuilder:
         )
         self.fields: dict[str, dict[str, Any]] = {}
         self.instances: list[dict] = []
+
+        if selected_attributes is None:
+            selected_attributes = self.component.attributes
 
         # Always add column "type"
         for attr in REQUIRED_FIELDS:
@@ -312,11 +317,7 @@ class PackageBuilder:
         """Add buses based on attached resources to package."""
         if "bus" not in self.resources:
             # Add default bus resource
-            bus = ElementResourceBuilder(
-                "bus",
-                "bus",
-                ["name", "region", "type", "balanced"],
-            )
+            bus = ElementResourceBuilder(component_name="bus", resource_name="bus")
             self.add_resource(bus)
         else:
             bus = self.resources["bus"]
@@ -331,7 +332,9 @@ class PackageBuilder:
                 for instance in resource.instances:
                     bus_name = instance.get(bus_fk)
                     if bus_name and bus_name not in existing_bus_names:
-                        bus.add_instance({"name": bus_name})
+                        bus_instance = DEFAULT_BUS_INSTANCE.copy()
+                        bus_instance["name"] = bus_name
+                        bus.add_instance(bus_instance)
                         existing_bus_names.add(bus_name)
 
     def save_package(self) -> None:

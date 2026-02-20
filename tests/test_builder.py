@@ -56,8 +56,8 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
     with (pkg_dir / "data/elements/bus.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 2  # noqa: PLR2004
-        assert lines[0].strip() == "name;region;type;balanced"
-        assert lines[1].strip() == "electricity;;bus;"
+        assert lines[0].strip() == "region;name;type;balanced"
+        assert lines[1].strip() == ";electricity;bus;True"
 
     with (pkg_dir / "data/elements/electricity_demand.csv").open("r") as f:
         lines = f.readlines()

@@ -37,8 +37,8 @@ def test_load_scenario(tmp_path: Path) -> None:
         assert len(lines) == 4  # noqa: PLR2004
         assert lines[0].strip() == "region;name;type;balanced"
         assert lines[1].strip() == ";electricity;bus;True"
-        assert lines[2].strip() == ";oil;bus;"
-        assert lines[3].strip() == ";heat;bus;"
+        assert lines[2].strip() == ";oil;bus;True"
+        assert lines[3].strip() == ";heat;bus;True"
 
     with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
         "r",
