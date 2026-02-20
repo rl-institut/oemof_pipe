@@ -38,6 +38,13 @@ def test_load_scenario(tmp_path: Path) -> None:
         assert len(lines) == 1
         assert lines[0].strip() == "timeindex"
 
+    with (expected_pkg_path / "data/elements/electricity_demand.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # noqa: PLR2004
+        assert lines[0].strip() == "region;amount;bus;type;name"
+        assert lines[1].strip() == "BB;;electricity;load;d1"
+        assert lines[2].strip() == "B;50;;load;d2"
+
     with (expected_pkg_path / "data/sequences/liion_storage_profile.csv").open(
         "r",
     ) as f:
@@ -125,7 +132,7 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     con = duckdb.connect(database=":memory:")
     csv_path = pkg_dir / "test" / "data/elements/electricity_demand.csv"
     res = con.execute(
-        f"SELECT amount FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'l1'",  # noqa: S608
+        f"SELECT amount FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'd1'",  # noqa: S608
     ).fetchone()
     assert res[0] == 10  # noqa: PLR2004
 

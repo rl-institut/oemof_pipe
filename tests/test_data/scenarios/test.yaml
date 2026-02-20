@@ -8,10 +8,12 @@ elements:
     attributes:
       - region
       - amount
+      - bus
     instances:
-      - name: "l1"
+      - name: "d1"
         region: "BB"
-      - name: "l2"
+        bus: "electricity"
+      - name: "d2"
         region: "B"
         amount: 50
   liion_storage:
