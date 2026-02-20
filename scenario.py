@@ -11,7 +11,7 @@ from builder import PackageBuilder, ElementResourceBuilder, Component
 from frictionless import Package
 
 
-def load_scenario(
+def create_scenario(
     scenario_name: str,
     scenario_dir: Path = settings.SCENARIO_DIR,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
@@ -148,6 +148,6 @@ def apply_scenario_data(
 
 
 if __name__ == "__main__":
-    load_scenario("test")
+    create_scenario("test")
     apply_scenario_data("raw/single.csv", "test", "test")
     apply_scenario_data("raw/multiple.csv", "test", "test")

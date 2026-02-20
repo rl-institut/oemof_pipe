@@ -3,7 +3,7 @@
 import pathlib
 from pathlib import Path
 
-from scenario import load_scenario, apply_scenario_data
+from scenario import create_scenario, apply_scenario_data
 import duckdb
 
 
@@ -13,7 +13,7 @@ def test_load_scenario(tmp_path: Path) -> None:
     pkg_dir = tmp_path / "datapackages"
     scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
 
-    load_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
 
     # Verify output
     expected_pkg_path = pkg_dir / "test"
@@ -29,7 +29,7 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     """Test applying scenario data in single format."""
     pkg_dir = tmp_path / "datapackages"
     scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
-    load_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "single.csv"
 
@@ -60,7 +60,7 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
     # We need a scenario where liion has efficiency and loss_rate attributes
     # to test the multiple format update.
     # For now, let's just make sure the code runs without error.
-    load_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "multiple.csv"
 
