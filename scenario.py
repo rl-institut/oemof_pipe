@@ -130,46 +130,21 @@ def apply_scenario_data(
             f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",  # noqa: S608
         )
 
-        # Check if there are any matches for this resource
-        has_matches = (
+        update_cols = _get_update_columns(con)
+        if update_cols:
+            set_clause = ", ".join(
+                [f"{col} = data_table.{col}" for col in update_cols],
+            )
             con.execute(
-                "SELECT COUNT(*) FROM resource_table "
-                "JOIN data_table ON resource_table.name = data_table.name",
-            ).fetchone()[0]
-            > 0
-        )
+                f"UPDATE resource_table SET {set_clause} FROM data_table WHERE resource_table.name = data_table.name",  # noqa: S608
+            )
 
-        if has_matches:
-            update_cols = _get_update_columns(con)
-            if update_cols:
-                set_clause = ", ".join(
-                    [f"{col} = data_table.{col}" for col in update_cols],
-                )
-                # Filter source table to only have columns that are present in the resource
-                # and only rows that have at least one non-null value in update_cols
-                # Actually, UPDATE ... FROM handles it
-                update_query = f"""
-                    UPDATE resource_table
-                    SET {set_clause}
-                    FROM data_table
-                    WHERE resource_table.name = data_table.name
-                """  # noqa: S608
-                con.execute(update_query)
-
-                # Save back to CSV
-                con.execute(
-                    f"COPY resource_table TO '{res_full_path}' (HEADER, DELIMITER ';')",
-                )
+            # Save back to CSV
+            con.execute(
+                f"COPY resource_table TO '{res_full_path}' (HEADER, DELIMITER ';')",
+            )
 
         con.execute("DROP TABLE IF EXISTS resource_table")
-
-    con.execute("DROP TABLE IF EXISTS data_table")
-    con.execute("DROP TABLE IF EXISTS pivot_table")
-
-    # Validation
-    report = pkg.validate()
-    if not report.valid:
-        settings.logger.error(f"Validation failed for datapackage {datapackage_name}.")
 
 
 if __name__ == "__main__":
