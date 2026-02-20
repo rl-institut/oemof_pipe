@@ -3,6 +3,11 @@ timeindex:
   periods: 8760
 
 elements:
+  bus:
+    component: bus
+    instances:
+      - name: "electricity"
+        balanced: True
   electricity_demand:
     component: load
     attributes:

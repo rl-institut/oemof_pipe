@@ -35,10 +35,10 @@ def test_load_scenario(tmp_path: Path) -> None:
     with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 4  # noqa: PLR2004
-        assert lines[0].strip() == "name;region;type;balanced"
-        assert lines[1].strip() == "electricity;;bus;"
-        assert lines[2].strip() == "oil;;bus;"
-        assert lines[3].strip() == "heat;;bus;"
+        assert lines[0].strip() == "region;name;type;balanced"
+        assert lines[1].strip() == ";electricity;bus;True"
+        assert lines[2].strip() == ";oil;bus;"
+        assert lines[3].strip() == ";heat;bus;"
 
     with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
         "r",
