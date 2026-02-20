@@ -23,8 +23,8 @@ def load_scenario(
 
     builder = PackageBuilder(scenario_name, datapackage_dir)
 
-    components = scenario_data.get("components", {})
-    for res_name, config in components.items():
+    elements = scenario_data.get("elements", {})
+    for res_name, config in elements.items():
         component_type = config.get("component")
         instances = config.get("instances", [])
         attributes = config.get("attributes", [])
