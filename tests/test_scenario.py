@@ -4,7 +4,7 @@ import json
 import pathlib
 from pathlib import Path
 
-from scenario import create_scenario, apply_scenario_data
+from scenario import create_scenario, apply_element_data
 import duckdb
 
 
@@ -56,7 +56,7 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "single.csv"
 
     # Apply data
-    apply_scenario_data(data_path, "test", "ALL", datapackage_dir=pkg_dir)
+    apply_element_data(data_path, "test", "ALL", datapackage_dir=pkg_dir)
 
     # Verify electricity_demand (l1) amount changed from default (none) to 10
     con = duckdb.connect(database=":memory:")
@@ -86,7 +86,7 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "multiple.csv"
 
-    apply_scenario_data(data_path, "test", "ALL", datapackage_dir=pkg_dir)
+    apply_element_data(data_path, "test", "ALL", datapackage_dir=pkg_dir)
 
     # In test.yaml, liion instances only have region and capacity.
     # To test efficiency update, we'd need to add efficiency to attributes in test.yaml or have it inferred.

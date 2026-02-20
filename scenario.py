@@ -125,7 +125,7 @@ def _get_update_columns(con: duckdb.DuckDBPyConnection) -> list[str]:
     return update_cols
 
 
-def apply_scenario_data(
+def apply_element_data(
     data_path: Path | str,
     datapackage_name: str,
     scenario_key: str,
@@ -189,5 +189,5 @@ def apply_scenario_data(
 
 if __name__ == "__main__":
     create_scenario("test")
-    apply_scenario_data("raw/single.csv", "test", "test")
-    apply_scenario_data("raw/multiple.csv", "test", "test")
+    apply_element_data("raw/single.csv", "test", "test")
+    apply_element_data("raw/multiple.csv", "test", "test")
