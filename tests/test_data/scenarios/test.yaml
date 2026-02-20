@@ -1,3 +1,7 @@
+timeindex:
+  start: 2016-01-01 00:00:00
+  periods: 8760
+
 elements:
   electricity_demand:
     component: load
@@ -19,3 +23,9 @@ elements:
       - name: "liion"
         region: "BB"
         capacity: 100
+
+sequences:
+  liion_storage_profile:
+    columns:
+      - efficiency
+      - loss_rate

@@ -23,6 +23,22 @@ def test_load_scenario(tmp_path: Path) -> None:
     assert (
         expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
     ).exists()
+    assert (expected_pkg_path / "data/sequences/liion_storage_profile.csv").exists()
+
+    with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 1
+        assert lines[0].strip() == "timeindex"
+
+    with (expected_pkg_path / "data/sequences/liion_storage_profile.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 8761  # noqa: PLR2004
+        assert lines[0].strip() == "timeindex;efficiency;loss_rate"
+        assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
 
 
 def test_apply_scenario_data_single(tmp_path: Path) -> None:

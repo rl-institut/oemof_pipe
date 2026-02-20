@@ -7,7 +7,13 @@ import yaml
 
 from pathlib import Path
 import settings
-from builder import PackageBuilder, ElementResourceBuilder, Component
+from builder import (
+    PackageBuilder,
+    ElementResourceBuilder,
+    Component,
+    SequenceResourceBuilder,
+    hourly_range,
+)
 from frictionless import Package
 
 
@@ -23,6 +29,15 @@ def create_scenario(
 
     builder = PackageBuilder(scenario_name, datapackage_dir)
 
+    _create_elements(builder, scenario_data)
+    _create_sequences(builder, scenario_data)
+
+    builder.infer_sequences_from_resources()
+    builder.save_package()
+
+
+def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
+    """Add elements from scenario data to package builder."""
     elements = scenario_data.get("elements", {})
     for res_name, config in elements.items():
         component_type = config.get("component")
@@ -46,8 +61,30 @@ def create_scenario(
 
         builder.add_resource(resource)
 
-    builder.infer_sequences_from_resources()
-    builder.save_package()
+
+def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:
+    """Add sequences from scenario data to package builder."""
+    timeindex_info = scenario_data.get("timeindex", {})
+    timeindex = list(
+        (
+            hourly_range(timeindex_info["start"], timeindex_info["periods"])
+            if timeindex_info
+            else None
+        ),
+    )
+
+    sequences = scenario_data.get("sequences", {})
+    for res_name, config in sequences.items():
+        # Create resource builder
+        resource = SequenceResourceBuilder(resource_name=res_name, timeindex=timeindex)
+
+        # Add all instances to resource if timeindex exists
+        if timeindex:
+            columns = config.get("columns", [])
+            for column in columns:
+                resource.add_instance(column, [0 for _ in range(len(timeindex))])
+
+        builder.add_resource(resource)
 
 
 def _get_component_names_and_paths_from_datapackage(
