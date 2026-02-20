@@ -7,7 +7,7 @@ import yaml
 
 from pathlib import Path
 import settings
-from builder import PackageBuilder, ResourceBuilder, Component
+from builder import PackageBuilder, ElementResourceBuilder, Component
 from frictionless import Package
 
 
@@ -32,7 +32,7 @@ def load_scenario(
             attributes = Component.from_name(component_type).attributes
 
         # Create resource builder
-        resource = ResourceBuilder(
+        resource = ElementResourceBuilder(
             component_name=component_type,
             resource_name=res_name,
             selected_attributes=attributes,

@@ -178,7 +178,7 @@ class DPBuilderApp(App):
         def handle_result(result) -> None:  # noqa: ANN001
             if result:
                 resource_name, selected_attrs = result
-                resource = builder.ResourceBuilder(
+                resource = builder.ElementResourceBuilder(
                     component_name,
                     resource_name,
                     selected_attrs,

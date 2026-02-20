@@ -55,26 +55,39 @@ def get_available_components(
     return [f.stem for f in component_dir.glob("*.yaml")]
 
 
-def map_to_frictionless_resource(resource: ResourceBuilder) -> Resource:
+def map_to_frictionless_resource(
+    resource: ElementResourceBuilder | SequenceResourceBuilder,
+) -> Resource:
     """Map resource to frictionless resource."""
     schema = Schema.from_descriptor(
         {
             "fields": list(resource.fields.values()),
-            "primaryKey": "timeindex" if resource.is_sequence else "name",
-            "foreignKeys": resource.foreign_keys,
+            "primaryKey": (
+                "timeindex" if isinstance(resource, SequenceResourceBuilder) else "name"
+            ),
+            "foreignKeys": (
+                resource.foreign_keys
+                if isinstance(resource, ElementResourceBuilder)
+                else []
+            ),
         },
         allow_invalid=True,
+    )
+    description = (
+        f"Derived from component: {resource.component.name}"
+        if isinstance(resource, ElementResourceBuilder)
+        else "Profiles"
     )
     return Resource(
         path=str(resource.path),
         name=resource.name,
         schema=schema,
-        description=f"Derived from component: {resource.component.name}",
+        description=description,
     )
 
 
-class ResourceBuilder:
-    """Class to create empty resource from predefined component."""
+class ElementResourceBuilder:
+    """Class to create empty element resource from predefined component."""
 
     def __init__(
         self,
@@ -82,13 +95,10 @@ class ResourceBuilder:
         resource_name: str,
         selected_attributes: list[str],
         sequences: list[str] | None = None,
-        *,
-        is_sequence: bool = False,
     ) -> None:
-        """Init resource builder."""
+        """Init element resource builder."""
         self.component: Component = Component.from_name(component_name)
         self.name: str = resource_name
-        self.is_sequence: bool = is_sequence
         self.sequences: set[str] = (
             set(self.component.sequences + sequences)
             if sequences
@@ -97,11 +107,10 @@ class ResourceBuilder:
         self.fields: dict[str, dict[str, Any]] = {}
         self.instances: list[dict] = []
 
-        # Always add column "type" to element resources
-        if not self.is_sequence:
-            for attr in REQUIRED_FIELDS:
-                if attr not in selected_attributes:
-                    selected_attributes.append(attr)
+        # Always add column "type"
+        for attr in REQUIRED_FIELDS:
+            if attr not in selected_attributes:
+                selected_attributes.append(attr)
         for field_name in selected_attributes:
             self.add_field(field_name)
 
@@ -173,11 +182,11 @@ class ResourceBuilder:
     def path(self) -> Path:
         """Return relative path of resource."""
         return Path(
-            f"data/{'sequences' if self.is_sequence else 'elements'}/{self.name}.csv",
+            f"data/elements/{self.name}.csv",
         )
 
     def save(self, package_path: Path) -> None:
-        """Save empty resource as CSV."""
+        """Save element resource as CSV."""
         full_path = package_path / self.path
         headers = list(self.fields)
         with full_path.open("w", newline="") as f:
@@ -186,6 +195,37 @@ class ResourceBuilder:
             for instance in self.instances:
                 row = [instance.get(attr, "") for attr in self.fields]
                 writer.writerow(row)
+
+
+class SequenceResourceBuilder:
+    """Class to build sequence resources."""
+
+    def __init__(self, resource_name: str) -> None:
+        """Init."""
+        self.name: str = resource_name
+        self.fields: dict[str, dict[str, Any]] = {
+            "timeindex": {
+                "name": "timeindex",
+                "type": "datetime",
+                "unit": "n/a",
+                "description": "Current timestep",
+            },
+        }
+
+    @property
+    def path(self) -> Path:
+        """Return relative path of resource."""
+        return Path(
+            f"data/sequences/{self.name}.csv",
+        )
+
+    def save(self, package_path: Path) -> None:
+        """Save sequence resource as CSV."""
+        full_path = package_path / self.path
+        headers = list(self.fields)
+        with full_path.open("w", newline="") as f:
+            writer = csv.writer(f, delimiter=";")
+            writer.writerow(headers)
 
 
 class PackageBuilder:
@@ -199,28 +239,34 @@ class PackageBuilder:
         """Initialize the package builder."""
         self.package_name: str = package_name
         self.base_dir: Path = Path(base_dir) / package_name
-        self.resources: list[ResourceBuilder] = []
+        self.resources: list[ElementResourceBuilder] = []
 
         # Add default bus resource
         self.add_resource(
-            ResourceBuilder("bus", "bus", ["name", "region", "type", "balanced"]),
+            ElementResourceBuilder(
+                "bus",
+                "bus",
+                ["name", "region", "type", "balanced"],
+            ),
         )
 
-    def add_resource(self, resource: ResourceBuilder) -> None:
+    def add_resource(
+        self,
+        resource: ElementResourceBuilder | SequenceResourceBuilder,
+    ) -> None:
         """Add resource to package from component."""
         self.resources.append(resource)
 
     def infer_sequences_from_resources(self) -> None:
         """Add sequences based on attached resources to package."""
         for resource in self.resources:
+            if isinstance(resource, SequenceResourceBuilder):
+                continue
             # Add resource for timeseries if at least one sequence is present
             if resource.sequences:
                 self.add_resource(
-                    ResourceBuilder(
-                        "profile",
+                    SequenceResourceBuilder(
                         f"{resource.name}_profile",
-                        ["timeindex"],
-                        is_sequence=True,
                     ),
                 )
 

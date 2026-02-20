@@ -3,7 +3,7 @@
 import json
 import pathlib
 
-from builder import PackageBuilder, ResourceBuilder
+from builder import PackageBuilder, ElementResourceBuilder
 
 
 def test_add_resource_and_save(tmp_path: pathlib.Path) -> None:
@@ -12,13 +12,13 @@ def test_add_resource_and_save(tmp_path: pathlib.Path) -> None:
     builder = PackageBuilder("test-pkg", base_dir=str(test_dir))
 
     # Using an existing component for the test ('asymmetric_storage')
-    resource = ResourceBuilder(
+    resource = ElementResourceBuilder(
         "storage",
         "liion_storage",
         ["region", "capacity"],
     )
     builder.add_resource(resource)
-    resource = ResourceBuilder(
+    resource = ElementResourceBuilder(
         "load",
         "electricity_demand",
         ["region", "amount"],

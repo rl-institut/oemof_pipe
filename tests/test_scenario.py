@@ -20,6 +20,9 @@ def test_load_scenario(tmp_path: Path) -> None:
     assert (expected_pkg_path / "datapackage.json").exists()
     assert (expected_pkg_path / "data/elements/electricity_demand.csv").exists()
     assert (expected_pkg_path / "data/elements/liion_storage.csv").exists()
+    assert (
+        expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
+    ).exists()
 
 
 def test_apply_scenario_data_single(tmp_path: Path) -> None:
