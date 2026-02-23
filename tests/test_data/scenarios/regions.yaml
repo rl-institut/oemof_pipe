@@ -11,8 +11,10 @@ elements:
     component: load
     attributes:
       - amount
+      - bus
     instances:
       - name: "d1"
+        bus: "electricity"
       - name: "d2"
         amount: 50
   heat_demand:
@@ -20,8 +22,10 @@ elements:
     regions:
     attributes:
       - amount
+      - bus
     instances:
       - name: "h1"
+        bus: "heat"
       - name: "h2"
         amount: 60
   liion_storage:

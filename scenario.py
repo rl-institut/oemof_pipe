@@ -68,7 +68,7 @@ def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
         builder.add_resource(resource)
 
 
-def _add_instances(
+def _add_instances(  # noqa: C901
     resource: ElementResourceBuilder,
     config: dict,
     attributes: list[str],
@@ -76,12 +76,27 @@ def _add_instances(
 ) -> None:
     """Add all instances from scenario data to element resource."""
 
+    def check_instance_attributes(instance_data: dict) -> None:
+        """Check if all attributes are available."""
+        for attr in instance_data:
+            if attr not in attributes:
+                raise KeyError(
+                    f"Attribute '{attr}' not available for '{resource.name}'.",
+                )
+
     def add_default_sequence_foreign_keys(instance_data: dict) -> dict:
         """Add default foreign keys to instance data."""
         for sequence_field in set(sequences + component.sequences):
             if sequence_field in instance_data or sequence_field not in attributes:
                 continue
             instance_data[sequence_field] = f"{instance_data['name']}-profile"
+        return instance_data
+
+    def adapt_regions_in_busses(instance_data: dict) -> dict:
+        """If region is set, bus names are adapted to be region-dependent."""
+        for bus_attr in component.busses:
+            if bus_attr in instance_data:
+                copied_instance[bus_attr] = f"{region}-{copied_instance[bus_attr]}"
         return instance_data
 
     component_type = config.get("component")
@@ -94,10 +109,12 @@ def _add_instances(
     if instance_regions is None:
         # Instances are region-independent
         for instance in instances:
+            check_instance_attributes(instance)
             instance_with_fks = add_default_sequence_foreign_keys(instance)
             resource.add_instance(instance_with_fks)
     else:
         for instance in instances:
+            check_instance_attributes(instance)
             for region in instance_regions:
                 copied_instance = instance.copy()
                 copied_instance["region"] = region
@@ -105,7 +122,8 @@ def _add_instances(
                 instance_with_fks = add_default_sequence_foreign_keys(
                     copied_instance,
                 )
-                resource.add_instance(instance_with_fks)
+                instance_with_region_busses = adapt_regions_in_busses(instance_with_fks)
+                resource.add_instance(instance_with_region_busses)
 
 
 def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:

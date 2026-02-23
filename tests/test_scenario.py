@@ -63,7 +63,7 @@ def test_load_scenario(tmp_path: Path) -> None:
         assert lines[3].strip() == "2016-01-01 02:00:00;0;0;0"
 
 
-def test_regions_scenario(tmp_path: Path) -> None:
+def test_regions_scenario(tmp_path: Path) -> None:  # noqa: PLR0915
     """Load the region scenario from test scenarios folder and create datapackage."""
     # Setup temporary directories
     pkg_dir = tmp_path / "datapackages"
@@ -89,21 +89,29 @@ def test_regions_scenario(tmp_path: Path) -> None:
         assert data["name"] == "regions"
         assert len(data["resources"]) == 7  # noqa: PLR2004
 
+    with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 4  # noqa: PLR2004
+        assert lines[0].strip() == "region;name;type;balanced"
+        assert lines[1].strip() == ";BB-electricity;bus;True"
+        assert lines[2].strip() == ";B-electricity;bus;True"
+        assert lines[3].strip() == ";heat;bus;True"
+
     with (expected_pkg_path / "data/elements/electricity_demand.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 5  # noqa: PLR2004
-        assert lines[0].strip() == "amount;region;type;name"
-        assert lines[1].strip() == ";BB;load;BB-d1"
-        assert lines[2].strip() == ";B;load;B-d1"
-        assert lines[3].strip() == "50;BB;load;BB-d2"
-        assert lines[4].strip() == "50;B;load;B-d2"
+        assert lines[0].strip() == "amount;bus;region;type;name"
+        assert lines[1].strip() == ";BB-electricity;BB;load;BB-d1"
+        assert lines[2].strip() == ";B-electricity;B;load;B-d1"
+        assert lines[3].strip() == "50;;BB;load;BB-d2"
+        assert lines[4].strip() == "50;;B;load;B-d2"
 
     with (expected_pkg_path / "data/elements/heat_demand.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 3  # noqa: PLR2004
-        assert lines[0].strip() == "amount;region;type;name"
-        assert lines[1].strip() == ";;load;h1"
-        assert lines[2].strip() == "60;;load;h2"
+        assert lines[0].strip() == "amount;bus;region;type;name"
+        assert lines[1].strip() == ";heat;;load;h1"
+        assert lines[2].strip() == "60;;;load;h2"
 
     with (expected_pkg_path / "data/elements/liion_storage.csv").open("r") as f:
         lines = f.readlines()
@@ -141,14 +149,14 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     con = duckdb.connect(database=":memory:")
     csv_path = pkg_dir / "test" / "data/elements/electricity_demand.csv"
     res = con.execute(
-        f"SELECT amount FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'd1'",  # noqa: S608
+        f"SELECT amount FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'd1'",
     ).fetchone()
     assert res[0] == 10  # noqa: PLR2004
 
     # Verify liion_storage (liion) capacity changed from 100 to 99
     csv_path = pkg_dir / "test" / "data/elements/liion_storage.csv"
     res = con.execute(
-        f"SELECT capacity FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",  # noqa: S608
+        f"SELECT capacity FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",
     ).fetchone()
     assert res[0] == 99  # noqa: PLR2004
 
@@ -177,7 +185,7 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
 
     # Check if efficiency was updated
     res = con.execute(
-        f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",  # noqa: S608
+        f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",
     ).fetchone()
     assert float(res[0]) == 0.9  # noqa: PLR2004
     assert float(res[1]) == 0.1  # noqa: PLR2004
@@ -202,7 +210,7 @@ def test_apply_sequence_data(tmp_path: Path) -> None:
 
     con = duckdb.connect(database=":memory:")
     res = con.execute(
-        f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') LIMIT 5",  # noqa: S608
+        f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') LIMIT 5",
     ).fetchall()
 
     assert float(res[0][0]) == 1.0
