@@ -176,7 +176,7 @@ def _get_component_names_and_paths_from_datapackage(
             continue
         full_path = Path(datapackage.basepath) / resource.path
         names = con.execute(
-            f"SELECT name FROM read_csv_auto('{full_path}', sep=';')",  # noqa: S608
+            f"SELECT name FROM read_csv_auto('{full_path}', sep=';')",
         ).fetchall()
         for name in names:
             name_to_path[name[0]] = resource.path
@@ -220,7 +220,7 @@ def apply_element_data(
 
     # Register data CSV as a table and filter by scenario
     con.execute(
-        f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "  # noqa: S608
+        f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "
         f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
     )
 
@@ -233,7 +233,9 @@ def apply_element_data(
     if is_single_format:
         # Single format: pivot the data_table to get one row per name
         con.execute(
-            f"CREATE TABLE data_table AS PIVOT raw_table ON {var_name_col} USING ANY_VALUE({var_value_col})",
+            f"CREATE TABLE data_table AS PIVOT ("
+            f"SELECT name, {scenario_column}, {var_name_col}, {var_value_col} FROM raw_table"
+            f") ON {var_name_col} USING ANY_VALUE({var_value_col})",
         )
     else:
         con.execute("CREATE TABLE data_table AS SELECT * FROM raw_table")
@@ -246,20 +248,20 @@ def apply_element_data(
 
         # Load resource into a table
         con.execute(
-            f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",  # noqa: S608
+            f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",
         )
 
         # Find matching columns
         update_cols = _get_update_columns(
             con,
-            excluded_columns=["name", "scenario", "id"],
+            excluded_columns=["name", scenario_column, "id"],
         )
         if update_cols:
             set_clause = ", ".join(
                 [f"{col} = data_table.{col}" for col in update_cols],
             )
             con.execute(
-                f"UPDATE resource_table SET {set_clause} FROM data_table WHERE resource_table.name = data_table.name",  # noqa: S608
+                f"UPDATE resource_table SET {set_clause} FROM data_table WHERE resource_table.name = data_table.name",
             )
 
             # Save back to CSV
@@ -297,12 +299,12 @@ def apply_sequence_data(
 
     # Load source data
     con.execute(
-        f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",  # noqa: S608
+        f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",
     )
 
     # Load existing resource data
     con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",  # noqa: S608
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",
     )
 
     # Find matching columns
@@ -312,7 +314,7 @@ def apply_sequence_data(
             [f"{col} = data_table.{col}" for col in update_cols],
         )
         con.execute(
-            f"UPDATE resource_table SET {set_clause} FROM data_table "  # noqa: S608
+            f"UPDATE resource_table SET {set_clause} FROM data_table "
             f"WHERE resource_table.timeindex = data_table.timeindex",
         )
 
