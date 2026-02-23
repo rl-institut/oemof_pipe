@@ -14,50 +14,6 @@ from frictionless import Package
 import settings
 
 
-def _get_update_columns(
-    con: duckdb.DuckDBPyConnection,
-    excluded_columns: list[str],
-) -> list[str]:
-    res_columns = [
-        col[1] for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
-    ]
-
-    # Find which columns from source_table exist in resource_table (excluding name, scenario, id, etc.)
-    source_columns = [
-        col[1] for col in con.execute("PRAGMA table_info('data_table')").fetchall()
-    ]
-    update_cols = [
-        col
-        for col in source_columns
-        if col in res_columns and col not in excluded_columns
-    ]
-    return update_cols
-
-
-def _get_resource_by_name(
-    datapackage_name: str,
-    sequence_name: str,
-    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
-) -> Path:
-    """Find and return a datapackage resource by name."""
-    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
-    pkg = Package(pkg_path, allow_invalid=True)
-
-    # Find the resource by name
-    res = None
-    for resource in pkg.resources:
-        if resource.name == sequence_name:
-            res = resource
-            break
-
-    if res is None:
-        msg = f"Resource '{sequence_name}' not found in datapackage."
-        raise ValueError(msg)
-
-    res_full_path = datapackage_dir / datapackage_name / res.path
-    return res_full_path
-
-
 def apply_element_data(
     data_path: Path | str,
     datapackage_name: str,
@@ -268,3 +224,47 @@ def _apply_sequence_data_rowwise(
 
     # Save back to CSV
     con.execute(f"COPY resource_table TO '{resource_path}' (HEADER, DELIMITER ';')")
+
+
+def _get_update_columns(
+    con: duckdb.DuckDBPyConnection,
+    excluded_columns: list[str],
+) -> list[str]:
+    res_columns = [
+        col[1] for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
+    ]
+
+    # Find which columns from source_table exist in resource_table (excluding name, scenario, id, etc.)
+    source_columns = [
+        col[1] for col in con.execute("PRAGMA table_info('data_table')").fetchall()
+    ]
+    update_cols = [
+        col
+        for col in source_columns
+        if col in res_columns and col not in excluded_columns
+    ]
+    return update_cols
+
+
+def _get_resource_by_name(
+    datapackage_name: str,
+    sequence_name: str,
+    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+) -> Path:
+    """Find and return a datapackage resource by name."""
+    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
+    pkg = Package(pkg_path, allow_invalid=True)
+
+    # Find the resource by name
+    res = None
+    for resource in pkg.resources:
+        if resource.name == sequence_name:
+            res = resource
+            break
+
+    if res is None:
+        msg = f"Resource '{sequence_name}' not found in datapackage."
+        raise ValueError(msg)
+
+    res_full_path = datapackage_dir / datapackage_name / res.path
+    return res_full_path
