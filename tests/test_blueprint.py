@@ -4,21 +4,21 @@ import json
 import pathlib
 from pathlib import Path
 
-from scenario import (
-    create_scenario,
+from blueprint import (
+    create_blueprint,
     apply_element_data,
     apply_sequence_data,
 )
 import duckdb
 
 
-def test_load_scenario(tmp_path: Path) -> None:
-    """Load the scenario from test scenarios folder and create datapackage."""
+def test_blueprint_crreation(tmp_path: Path) -> None:
+    """Load the blueprint from test blueprints and create datapackage."""
     # Setup temporary directories
     pkg_dir = tmp_path / "datapackages"
-    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
+    blueprint_dir = pathlib.Path(__file__).parent / "test_data" / "blueprints"
 
-    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    create_blueprint("test", blueprint_dir=blueprint_dir, datapackage_dir=pkg_dir)
 
     # Verify output
     expected_pkg_path = pkg_dir / "test"
@@ -67,13 +67,13 @@ def test_load_scenario(tmp_path: Path) -> None:
         assert lines[3].strip() == "2016-01-01 02:00:00;0;0;0"
 
 
-def test_regions_scenario(tmp_path: Path) -> None:  # noqa: PLR0915
-    """Load the region scenario from test scenarios folder and create datapackage."""
+def test_regions_blueprint(tmp_path: Path) -> None:  # noqa: PLR0915
+    """Load the region blueprint from test blueprints folder and create datapackage."""
     # Setup temporary directories
     pkg_dir = tmp_path / "datapackages"
-    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
+    blueprint_dir = pathlib.Path(__file__).parent / "test_data" / "blueprints"
 
-    create_scenario("regions", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    create_blueprint("regions", blueprint_dir=blueprint_dir, datapackage_dir=pkg_dir)
 
     # Verify output
     expected_pkg_path = pkg_dir / "regions"
@@ -142,10 +142,10 @@ def test_regions_scenario(tmp_path: Path) -> None:  # noqa: PLR0915
 
 
 def test_apply_scenario_data_single(tmp_path: Path) -> None:
-    """Test applying scenario data in single format."""
+    """Test applying blueprint data in single format."""
     pkg_dir = tmp_path / "datapackages"
-    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
-    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    blueprint_dir = pathlib.Path(__file__).parent / "test_data" / "blueprints"
+    create_blueprint("test", blueprint_dir=blueprint_dir, datapackage_dir=pkg_dir)
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "single.csv"
 
@@ -169,14 +169,14 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
 
 
 def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
-    """Test applying scenario data in multiple format."""
+    """Test applying blueprint data in multiple format."""
     pkg_dir = tmp_path / "datapackages"
-    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
+    blueprint_dir = pathlib.Path(__file__).parent / "test_data" / "blueprints"
 
     # We need a scenario where liion has efficiency and loss_rate attributes
     # to test the multiple format update.
     # For now, let's just make sure the code runs without error.
-    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    create_blueprint("test", blueprint_dir=blueprint_dir, datapackage_dir=pkg_dir)
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "multiple.csv"
 
@@ -201,8 +201,8 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
 def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:
     """Test applying sequence data to an existing datapackage."""
     pkg_dir = tmp_path / "datapackages"
-    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
-    create_scenario("test", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    blueprint_dir = pathlib.Path(__file__).parent / "test_data" / "blueprints"
+    create_blueprint("test", blueprint_dir=blueprint_dir, datapackage_dir=pkg_dir)
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "timeseries.csv"
 
@@ -227,8 +227,12 @@ def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:
 def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
     """Test applying rowwise sequence data to an existing datapackage."""
     pkg_dir = tmp_path / "datapackages"
-    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
-    create_scenario("regions", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+    blueprint_dir = (
+        pathlib.Path(__file__).parent
+        / "test_data"
+        / "blueprintsRemove test script in scenarios.py"
+    )
+    create_blueprint("regions", blueprint_dir=blueprint_dir, datapackage_dir=pkg_dir)
 
     data_path = (
         pathlib.Path(__file__).parent / "test_data" / "raw" / "timeseries_single.csv"

@@ -25,29 +25,29 @@ from builder import (
 )
 
 
-def create_scenario(
-    scenario_name: str,
-    scenario_dir: Path = settings.SCENARIO_DIR,
+def create_blueprint(
+    blueprint_name: str,
+    blueprint_dir: Path = settings.BLUEPRINT_DIR,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
 ) -> None:
     """Read scenario from scenario folder and create a datapackage from it."""
-    scenario_path = scenario_dir / f"{scenario_name}.yaml"
-    with scenario_path.open("r") as f:
-        scenario_data = yaml.safe_load(f)
+    blueprint_path = blueprint_dir / f"{blueprint_name}.yaml"
+    with blueprint_path.open("r") as f:
+        blueprint_data = yaml.safe_load(f)
 
-    builder = PackageBuilder(scenario_name, datapackage_dir)
+    builder = PackageBuilder(blueprint_name, datapackage_dir)
 
-    _create_elements(builder, scenario_data)
+    _create_elements(builder, blueprint_data)
     builder.infer_sequences_from_resources()
-    _create_sequences(builder, scenario_data)
+    _create_sequences(builder, blueprint_data)
     builder.infer_busses_from_resources()
     builder.save_package()
 
 
-def _create_elements(builder: PackageBuilder, scenario_data: dict) -> None:
+def _create_elements(builder: PackageBuilder, blueprint_data: dict) -> None:
     """Add elements from scenario data to package builder."""
-    regions = scenario_data.get("regions")
-    elements = scenario_data.get("elements", {})
+    regions = blueprint_data.get("regions")
+    elements = blueprint_data.get("elements", {})
     for res_name, config in elements.items():
         component_type = config.get("component")
         component = Component.from_name(component_type)
@@ -77,7 +77,7 @@ def _add_instances(  # noqa: C901
     attributes: list[str],
     regions: list[str] | None,
 ) -> None:
-    """Add all instances from scenario data to element resource."""
+    """Add all instances from blueprint data to element resource."""
 
     def check_instance_attributes(instance_data: dict) -> None:
         """Check if all attributes are available."""
@@ -129,9 +129,9 @@ def _add_instances(  # noqa: C901
                 resource.add_instance(instance_with_region_busses)
 
 
-def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:
-    """Add sequences from scenario data to package builder."""
-    timeindex_info = scenario_data.get("timeindex", {})
+def _create_sequences(builder: PackageBuilder, blueprint_data: dict) -> None:
+    """Add sequences from blueprint data to package builder."""
+    timeindex_info = blueprint_data.get("timeindex", {})
     timeindex = list(
         (
             hourly_range(timeindex_info["start"], timeindex_info["periods"])
@@ -140,8 +140,8 @@ def _create_sequences(builder: PackageBuilder, scenario_data: dict) -> None:
         ),
     )
 
-    # Add sequences explicitly set in scenario file
-    sequences = scenario_data.get("sequences", {})
+    # Add sequences explicitly set in blueprint file
+    sequences = blueprint_data.get("sequences", {})
     for res_name, config in sequences.items():
         # Create resource builder
         resource = SequenceResourceBuilder(resource_name=res_name, timeindex=timeindex)
