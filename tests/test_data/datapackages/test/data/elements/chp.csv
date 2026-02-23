@@ -1,0 +1,2 @@
+region;name;type;carrier;tech;fuel_bus;electricity_bus;heat_bus;capacity;electric_efficiency;thermal_efficiency;condensing_efficiency;expandable;capacity_cost;carrier_cost;marginal_cost
+;ex;extraction;;;oil;electricity;heat;100;;;;;;;

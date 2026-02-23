@@ -1,0 +1,5 @@
+amount;bus;profile;region;type;name
+;BB-electricity;BB-d1-profile;BB;load;BB-d1
+;B-electricity;B-d1-profile;B;load;B-d1
+50;;BB-d2-profile;BB;load;BB-d2
+50;;B-d2-profile;B;load;B-d2

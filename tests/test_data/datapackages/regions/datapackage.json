@@ -1,0 +1,520 @@
+{
+  "name": "regions",
+  "resources": [
+    {
+      "name": "electricity_demand",
+      "type": "table",
+      "description": "Derived from component: load",
+      "path": "data/elements/electricity_demand.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "amount",
+            "type": "number",
+            "description": "Total load over one year",
+            "custom": {
+              "unit": "GWh/a"
+            }
+          },
+          {
+            "name": "bus",
+            "type": "string",
+            "description": "The bus this component is connected to",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "profile",
+            "type": "string",
+            "description": "Name of the profile",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Country code",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "description": "Type",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Name",
+            "custom": {
+              "unit": "n/a"
+            }
+          }
+        ],
+        "primaryKey": [
+          "name"
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "bus"
+            ],
+            "reference": {
+              "resource": "bus",
+              "fields": [
+                "name"
+              ]
+            }
+          },
+          {
+            "fields": [
+              "profile"
+            ],
+            "reference": {
+              "resource": "electricity_demand_profile",
+              "fields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "heat_demand",
+      "type": "table",
+      "description": "Derived from component: load",
+      "path": "data/elements/heat_demand.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "amount",
+            "type": "number",
+            "description": "Total load over one year",
+            "custom": {
+              "unit": "GWh/a"
+            }
+          },
+          {
+            "name": "bus",
+            "type": "string",
+            "description": "The bus this component is connected to",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Country code",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "description": "Type",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Name",
+            "custom": {
+              "unit": "n/a"
+            }
+          }
+        ],
+        "primaryKey": [
+          "name"
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "bus"
+            ],
+            "reference": {
+              "resource": "bus",
+              "fields": [
+                "name"
+              ]
+            }
+          },
+          {
+            "fields": [
+              "profile"
+            ],
+            "reference": {
+              "resource": "heat_demand_profile",
+              "fields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "liion_storage",
+      "type": "table",
+      "description": "Derived from component: storage",
+      "path": "data/elements/liion_storage.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Country code",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Name",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "description": "Type",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "carrier",
+            "type": "string",
+            "description": "Energy carrier",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "tech",
+            "type": "string",
+            "description": "Technology",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "bus",
+            "type": "string",
+            "description": "The bus this component is connected to",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "capacity",
+            "type": "number",
+            "description": "Installed capacity",
+            "custom": {
+              "unit": "MW"
+            }
+          },
+          {
+            "name": "storage_capacity",
+            "type": "number",
+            "description": "Installed storage capacity",
+            "custom": {
+              "unit": "MWh"
+            }
+          },
+          {
+            "name": "efficiency",
+            "type": "string",
+            "description": "Efficiency of charging/discharging",
+            "custom": {
+              "unit": "unitless"
+            }
+          },
+          {
+            "name": "marginal_cost",
+            "type": "number",
+            "description": "Marginal cost of charging/discharging",
+            "custom": {
+              "unit": "Eur/MWh"
+            }
+          },
+          {
+            "name": "loss_rate",
+            "type": "string",
+            "description": "Losses due to self discharging",
+            "custom": {
+              "unit": "unitless"
+            }
+          },
+          {
+            "name": "expandable",
+            "type": "boolean",
+            "description": "Capacity can be expanded",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "capacity_potential",
+            "type": "number",
+            "description": "Potential of the investment for capacity",
+            "custom": {
+              "unit": "MW"
+            }
+          },
+          {
+            "name": "storage_capacity_potential",
+            "type": "number",
+            "description": "Potential of the investment for storage capacity",
+            "custom": {
+              "unit": "MWh"
+            }
+          },
+          {
+            "name": "capacity_cost",
+            "type": "number",
+            "description": "Annualized investment cost per charging/discharging capacity",
+            "custom": {
+              "unit": "Eur/MW"
+            }
+          },
+          {
+            "name": "storage_capacity_cost",
+            "type": "number",
+            "description": "Annualized investment cost per storage capacity",
+            "custom": {
+              "unit": "Eur/MWh"
+            }
+          },
+          {
+            "name": "input_parameters",
+            "type": "object",
+            "description": "Optional parameters passed to oemof-solph's input flow",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "output_parameters",
+            "type": "object",
+            "description": "Optional parameters passed to oemof-solph's output flow ",
+            "custom": {
+              "unit": "n/a"
+            }
+          }
+        ],
+        "primaryKey": [
+          "name"
+        ],
+        "foreignKeys": [
+          {
+            "fields": [
+              "bus"
+            ],
+            "reference": {
+              "resource": "bus",
+              "fields": [
+                "name"
+              ]
+            }
+          },
+          {
+            "fields": [
+              "efficiency"
+            ],
+            "reference": {
+              "resource": "liion_storage_profile",
+              "fields": []
+            }
+          },
+          {
+            "fields": [
+              "loss_rate"
+            ],
+            "reference": {
+              "resource": "liion_storage_profile",
+              "fields": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "electricity_demand_profile",
+      "type": "table",
+      "description": "Profiles",
+      "path": "data/sequences/electricity_demand_profile.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "timeindex",
+            "type": "datetime",
+            "description": "Current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "B-d1-profile",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "B-d2-profile",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "BB-d1-profile",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "BB-d2-profile",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          }
+        ],
+        "primaryKey": [
+          "timeindex"
+        ],
+        "foreignKeys": []
+      }
+    },
+    {
+      "name": "heat_demand_profile",
+      "type": "table",
+      "description": "Profiles",
+      "path": "data/sequences/heat_demand_profile.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "timeindex",
+            "type": "datetime",
+            "description": "Current timestep",
+            "unit": "n/a"
+          }
+        ],
+        "primaryKey": [
+          "timeindex"
+        ],
+        "foreignKeys": []
+      }
+    },
+    {
+      "name": "liion_storage_profile",
+      "type": "table",
+      "description": "Profiles",
+      "path": "data/sequences/liion_storage_profile.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "timeindex",
+            "type": "datetime",
+            "description": "Current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "efficiency",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "loss_rate",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          },
+          {
+            "name": "B-liion-profile",
+            "type": "number",
+            "description": "Value for current timestep",
+            "unit": "n/a"
+          }
+        ],
+        "primaryKey": [
+          "timeindex"
+        ],
+        "foreignKeys": []
+      }
+    },
+    {
+      "name": "bus",
+      "type": "table",
+      "description": "Derived from component: bus",
+      "path": "data/elements/bus.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "schema": {
+        "fields": [
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Country code",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Name of the bus. Can be referred by other components.",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "description": "Type",
+            "custom": {
+              "unit": "n/a"
+            }
+          },
+          {
+            "name": "balanced",
+            "type": "boolean",
+            "description": "Whether bus is balanced or not",
+            "custom": {
+              "unit": ""
+            }
+          }
+        ],
+        "primaryKey": [
+          "name"
+        ],
+        "foreignKeys": []
+      }
+    }
+  ]
+}

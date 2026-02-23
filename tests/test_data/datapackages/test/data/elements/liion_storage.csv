@@ -1,0 +1,2 @@
+region;name;type;carrier;tech;bus;capacity;storage_capacity;efficiency;marginal_cost;loss_rate;expandable;capacity_potential;storage_capacity_potential;capacity_cost;storage_capacity_cost;input_parameters;output_parameters
+;liion;storage;;;;99;;0.9;;0.1;;;;;;;

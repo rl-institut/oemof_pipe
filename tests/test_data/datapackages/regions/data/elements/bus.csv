@@ -1,0 +1,4 @@
+region;name;type;balanced
+;BB-electricity;bus;True
+;B-electricity;bus;True
+;heat;bus;True
