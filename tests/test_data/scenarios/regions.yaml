@@ -12,6 +12,7 @@ elements:
     attributes:
       - amount
       - bus
+      - profile
     instances:
       - name: "d1"
         bus: "electricity"

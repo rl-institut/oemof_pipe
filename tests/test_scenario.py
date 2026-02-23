@@ -4,7 +4,12 @@ import json
 import pathlib
 from pathlib import Path
 
-from scenario import create_scenario, apply_element_data, apply_sequence_data
+from scenario import (
+    create_scenario,
+    apply_element_data,
+    apply_sequence_data,
+    apply_sequence_data_rowwise,
+)
 import duckdb
 
 
@@ -100,11 +105,11 @@ def test_regions_scenario(tmp_path: Path) -> None:  # noqa: PLR0915
     with (expected_pkg_path / "data/elements/electricity_demand.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 5  # noqa: PLR2004
-        assert lines[0].strip() == "amount;bus;region;type;name"
-        assert lines[1].strip() == ";BB-electricity;BB;load;BB-d1"
-        assert lines[2].strip() == ";B-electricity;B;load;B-d1"
-        assert lines[3].strip() == "50;;BB;load;BB-d2"
-        assert lines[4].strip() == "50;;B;load;B-d2"
+        assert lines[0].strip() == "amount;bus;profile;region;type;name"
+        assert lines[1].strip() == ";BB-electricity;BB-d1-profile;BB;load;BB-d1"
+        assert lines[2].strip() == ";B-electricity;B-d1-profile;B;load;B-d1"
+        assert lines[3].strip() == "50;;BB-d2-profile;BB;load;BB-d2"
+        assert lines[4].strip() == "50;;B-d2-profile;B;load;B-d2"
 
     with (expected_pkg_path / "data/elements/heat_demand.csv").open("r") as f:
         lines = f.readlines()
@@ -122,8 +127,11 @@ def test_regions_scenario(tmp_path: Path) -> None:  # noqa: PLR0915
         "r",
     ) as f:
         lines = f.readlines()
-        assert len(lines) == 1
-        assert lines[0].strip() == "timeindex"
+        assert len(lines) == 8761  # noqa: PLR2004
+        assert (
+            lines[0].strip()
+            == "timeindex;B-d1-profile;B-d2-profile;BB-d1-profile;BB-d2-profile"
+        )
 
     with (expected_pkg_path / "data/sequences/liion_storage_profile.csv").open(
         "r",
@@ -215,3 +223,33 @@ def test_apply_sequence_data(tmp_path: Path) -> None:
 
     assert float(res[0][0]) == 1.0
     assert float(res[4][0]) == 5.0  # noqa: PLR2004
+
+
+def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
+    """Test applying rowwise sequence data to an existing datapackage."""
+    pkg_dir = tmp_path / "datapackages"
+    scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
+    create_scenario("regions", scenario_dir=scenario_dir, datapackage_dir=pkg_dir)
+
+    data_path = (
+        pathlib.Path(__file__).parent / "test_data" / "raw" / "timeseries_single.csv"
+    )
+
+    apply_sequence_data_rowwise(
+        data_path,
+        "regions",
+        "electricity_demand_profile",
+        datapackage_dir=pkg_dir,
+        scenario="2050-el_eff",
+        scenario_column="scenario_key",
+    )
+
+    csv_path = pkg_dir / "regions" / "data/sequences/electricity_demand_profile.csv"
+
+    con = duckdb.connect(database=":memory:")
+    res = con.execute(
+        f"""SELECT "BB-d1-profile" FROM read_csv_auto('{csv_path}', sep=';') LIMIT 3""",
+    ).fetchall()
+    assert float(res[0][0]) == 4.586600128650665  # noqa: PLR2004
+    assert float(res[1][0]) == 4.047  # noqa: PLR2004
+    assert float(res[2][0]) == 3.3725000000000005  # noqa: PLR2004
