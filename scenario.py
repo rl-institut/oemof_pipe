@@ -458,10 +458,3 @@ def _apply_sequence_data_rowwise(
 
     # Save back to CSV
     con.execute(f"COPY resource_table TO '{resource_path}' (HEADER, DELIMITER ';')")
-
-
-if __name__ == "__main__":
-    create_scenario("regions")
-    apply_element_data("raw/single.csv", "regions", "test")
-    apply_element_data("raw/multiple.csv", "regions", "test")
-    apply_sequence_data("raw/timeseries.csv", "regions", "liion_storage_profile")
