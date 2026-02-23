@@ -223,6 +223,30 @@ def _get_update_columns(
     return update_cols
 
 
+def _get_resource_by_name(
+    datapackage_name: str,
+    sequence_name: str,
+    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+) -> Path:
+    """Find and return a datapackage resource by name."""
+    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
+    pkg = Package(pkg_path, allow_invalid=True)
+
+    # Find the resource by name
+    res = None
+    for resource in pkg.resources:
+        if resource.name == sequence_name:
+            res = resource
+            break
+
+    if res is None:
+        msg = f"Resource '{sequence_name}' not found in datapackage."
+        raise ValueError(msg)
+
+    res_full_path = datapackage_dir / datapackage_name / res.path
+    return res_full_path
+
+
 def apply_element_data(
     data_path: Path | str,
     datapackage_name: str,
@@ -233,9 +257,6 @@ def apply_element_data(
     var_value_col: str = "var_value",
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage using DuckDB."""
-    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
-    pkg = Package(pkg_path, allow_invalid=True)
-
     con = duckdb.connect(database=":memory:")
 
     # Register data CSV as a table and filter by scenario
@@ -260,6 +281,8 @@ def apply_element_data(
     else:
         con.execute("CREATE TABLE data_table AS SELECT * FROM raw_table")
 
+    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
+    pkg = Package(pkg_path, allow_invalid=True)
     for res in pkg.resources:
         if "sequences" in res.path:
             continue
@@ -299,21 +322,11 @@ def apply_sequence_data(
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
-    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
-    pkg = Package(pkg_path, allow_invalid=True)
-
-    # Find the resource by name
-    res = None
-    for resource in pkg.resources:
-        if resource.name == sequence_name:
-            res = resource
-            break
-
-    if res is None:
-        msg = f"Resource '{sequence_name}' not found in datapackage."
-        raise ValueError(msg)
-
-    res_full_path = datapackage_dir / datapackage_name / res.path
+    res_full_path = _get_resource_by_name(
+        datapackage_name,
+        sequence_name,
+        datapackage_dir,
+    )
 
     con = duckdb.connect(database=":memory:")
 
@@ -361,21 +374,11 @@ def apply_sequence_data_rowwise(  # noqa: PLR0913
     Filters by 'scenario' in 'scenario_column'.
     The 'series_col' column must contain a list of values (e.g. '[1.0, 2.0, 3.0]').
     """
-    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
-    pkg = Package(pkg_path, allow_invalid=True)
-
-    # Find the resource by name
-    res = None
-    for resource in pkg.resources:
-        if resource.name == sequence_name:
-            res = resource
-            break
-
-    if res is None:
-        msg = f"Resource '{sequence_name}' not found in datapackage."
-        raise ValueError(msg)
-
-    res_full_path = datapackage_dir / datapackage_name / res.path
+    res_full_path = _get_resource_by_name(
+        datapackage_name,
+        sequence_name,
+        datapackage_dir,
+    )
 
     con = duckdb.connect(database=":memory:")
 
