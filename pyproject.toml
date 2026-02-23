@@ -1,7 +1,7 @@
 [project]
-name = "dp-pipe"
+name = "oemof-pipe"
 version = "0.1.0"
-description = "Add your description here"
+description = "Tool to generate oemof.tabular datapackages from scenario files."
 requires-python = ">=3.13"
 dependencies = [
     "frictionless>=5.18.1",

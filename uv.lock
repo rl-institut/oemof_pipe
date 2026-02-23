@@ -229,39 +229,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dp-pipe"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "frictionless" },
-    { name = "loguru" },
-    { name = "python-dotenv" },
-    { name = "textual", extra = ["syntax"] },
-    { name = "textual-dev" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pre-commit" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "frictionless", specifier = ">=5.18.1" },
-    { name = "loguru", specifier = ">=0.7.3" },
-    { name = "python-dotenv", specifier = ">=1.2.1" },
-    { name = "textual", extras = ["syntax"], specifier = ">=8.0.0" },
-    { name = "textual-dev", specifier = ">=1.8.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pre-commit", specifier = ">=4.5.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
-]
-
-[[package]]
 name = "filelock"
 version = "3.24.2"
 source = { registry = "https://pypi.org/simple" }
@@ -704,6 +671,39 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438 },
+]
+
+[[package]]
+name = "oemof-pipe"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "frictionless" },
+    { name = "loguru" },
+    { name = "python-dotenv" },
+    { name = "textual", extra = ["syntax"] },
+    { name = "textual-dev" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pre-commit" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "frictionless", specifier = ">=5.18.1" },
+    { name = "loguru", specifier = ">=0.7.3" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "textual", extras = ["syntax"], specifier = ">=8.0.0" },
+    { name = "textual-dev", specifier = ">=1.8.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
 ]
 
 [[package]]

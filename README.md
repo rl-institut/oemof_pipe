@@ -1,3 +1,3 @@
-# DP Pipe
+# Oemof Pipe
 
-This package simplifies creating and updating oemof datapackages.
+This package simplifies creating and updating oemof.tabular datapackages.
