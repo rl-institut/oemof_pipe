@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -315,11 +316,15 @@ def apply_element_data(
         con.execute("DROP TABLE IF EXISTS resource_table")
 
 
-def apply_sequence_data(
+def apply_sequence_data(  # noqa: PLR0913
     data_path: Path | str,
     datapackage_name: str,
     sequence_name: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    scenario: str = "ALL",
+    scenario_column: str = "scenario",
+    var_name_col: str = "var_name",
+    series_col: str = "series",
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     res_full_path = _get_resource_by_name(
@@ -330,6 +335,27 @@ def apply_sequence_data(
 
     con = duckdb.connect(database=":memory:")
 
+    columns = [
+        column[0]
+        for column in con.execute(
+            f"DESCRIBE SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",
+        ).fetchall()
+    ]
+    if var_name_col in columns and series_col in columns:
+        _apply_sequence_data_rowwise(
+            data_path=data_path,
+            resource_path=res_full_path,
+            scenario=scenario,
+            scenario_column=scenario_column,
+            var_name_col=var_name_col,
+            series_col=series_col,
+        )
+    _apply_sequence_data_columnwise(data_path, res_full_path)
+
+
+def _apply_sequence_data_columnwise(data_path: Path | str, resource_path: Path) -> None:
+    """Apply scenario data from CSV to an existing datapackage."""
+    con = duckdb.connect(database=":memory:")
     # Load source data
     con.execute(
         f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",
@@ -337,7 +363,7 @@ def apply_sequence_data(
 
     # Load existing resource data
     con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource_path}', sep=';', all_varchar=True)",
     )
 
     # Find matching columns
@@ -353,15 +379,13 @@ def apply_sequence_data(
 
         # Save back to CSV
         con.execute(
-            f"COPY resource_table TO '{res_full_path}' (HEADER, DELIMITER ';')",
+            f"COPY resource_table TO '{resource_path}' (HEADER, DELIMITER ';')",
         )
 
 
-def apply_sequence_data_rowwise(  # noqa: PLR0913
+def _apply_sequence_data_rowwise(
     data_path: Path | str,
-    datapackage_name: str,
-    sequence_name: str,
-    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    resource_path: Path,
     scenario: str = "ALL",
     scenario_column: str = "scenario_key",
     var_name_col: str = "var_name",
@@ -374,12 +398,6 @@ def apply_sequence_data_rowwise(  # noqa: PLR0913
     Filters by 'scenario' in 'scenario_column'.
     The 'series_col' column must contain a list of values (e.g. '[1.0, 2.0, 3.0]').
     """
-    res_full_path = _get_resource_by_name(
-        datapackage_name,
-        sequence_name,
-        datapackage_dir,
-    )
-
     con = duckdb.connect(database=":memory:")
 
     # Load source data and filter by scenario
@@ -390,7 +408,7 @@ def apply_sequence_data_rowwise(  # noqa: PLR0913
 
     # Load existing resource data
     con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource_path}', sep=';', all_varchar=True)",
     )
 
     # Get all column names from resource_table except timeindex
@@ -439,7 +457,7 @@ def apply_sequence_data_rowwise(  # noqa: PLR0913
             )
 
     # Save back to CSV
-    con.execute(f"COPY resource_table TO '{res_full_path}' (HEADER, DELIMITER ';')")
+    con.execute(f"COPY resource_table TO '{resource_path}' (HEADER, DELIMITER ';')")
 
 
 if __name__ == "__main__":

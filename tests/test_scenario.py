@@ -8,7 +8,6 @@ from scenario import (
     create_scenario,
     apply_element_data,
     apply_sequence_data,
-    apply_sequence_data_rowwise,
 )
 import duckdb
 
@@ -199,7 +198,7 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
     assert float(res[1]) == 0.1  # noqa: PLR2004
 
 
-def test_apply_sequence_data(tmp_path: Path) -> None:
+def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:
     """Test applying sequence data to an existing datapackage."""
     pkg_dir = tmp_path / "datapackages"
     scenario_dir = pathlib.Path(__file__).parent / "test_data" / "scenarios"
@@ -235,7 +234,7 @@ def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
         pathlib.Path(__file__).parent / "test_data" / "raw" / "timeseries_single.csv"
     )
 
-    apply_sequence_data_rowwise(
+    apply_sequence_data(
         data_path,
         "regions",
         "electricity_demand_profile",
