@@ -22,6 +22,7 @@ def create_scenario(
     """Duplicate datapackage given by name and manipulate its data using scenario."""
     # Copy datapackage as new datapackage with scenario name as suffix
     scenario_datapackage = f"{datapackage_name}_{scenario}"
+    settings.logger.info(f"Creating new datapackage '{scenario_datapackage}'.")
     shutil.copytree(
         datapackage_dir / datapackage_name,
         datapackage_dir / scenario_datapackage,
@@ -56,6 +57,9 @@ def create_scenario(
             datapackage_dir=datapackage_dir,
             **sequence,
         )
+    settings.logger.info(
+        f"Successfully applied scenario data on '{scenario_datapackage}'.",
+    )
 
 
 def apply_element_data(
@@ -68,6 +72,9 @@ def apply_element_data(
     var_value_col: str = "var_value",
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage using DuckDB."""
+    settings.logger.info(
+        f"Applying element data from '{data_path}' with scenario filter '{scenario}' on '{datapackage_name}'.",
+    )
     con = duckdb.connect(database=":memory:")
 
     # Register data CSV as a table and filter by scenario
@@ -137,6 +144,10 @@ def apply_sequence_data(  # noqa: PLR0913
     series_col: str = "series",
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
+    settings.logger.info(
+        f"Applying sequence data from '{data_path}' with scenario filter '{scenario}' "
+        f"on sequence '{sequence_name}' in '{datapackage_name}'.",
+    )
     res_full_path = _get_resource_by_name(
         datapackage_name,
         sequence_name,

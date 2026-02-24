@@ -41,6 +41,7 @@ def create_blueprint(
     _create_sequences(builder, blueprint_data)
     builder.infer_busses_from_resources()
     builder.save_package()
+    settings.logger.info(f"Successfully created datapackage '{blueprint_name}'.")
 
 
 def _create_elements(builder: PackageBuilder, blueprint_data: dict) -> None:
