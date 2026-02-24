@@ -6,6 +6,7 @@ from pathlib import Path
 
 import duckdb
 
+import scenario
 from scenario import apply_element_data, apply_sequence_data
 
 
@@ -123,3 +124,47 @@ def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
     assert float(res[0][0]) == 4.586600128650665  # noqa: PLR2004
     assert float(res[1][0]) == 4.047  # noqa: PLR2004
     assert float(res[2][0]) == 3.3725000000000005  # noqa: PLR2004
+
+
+def test_create_scenario() -> None:
+    """Test applying scenario setup on datapackage."""
+    datapackage_dir = pathlib.Path(__file__).parent / "test_data" / "datapackages"
+
+    # Check before manipulation
+    with (datapackage_dir / "test/data/elements/electricity_demand.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # noqa: PLR2004
+        assert lines[0].strip() == "region;amount;bus;type;name"
+        assert lines[1].strip() == ";;electricity;load;d1"
+
+    with (datapackage_dir / "test/data/sequences/electricity_demand_profile.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 4  # noqa: PLR2004
+        assert lines[0].strip() == "timeindex;electricity-demand-profile"
+        assert lines[1].strip() == "2026-01-01 00:00:00;0"
+
+    scenario.create_scenario(
+        "test",
+        scenario="2050-el_eff",
+        datapackage_dir=datapackage_dir,
+        scenario_dir=pathlib.Path(__file__).parent / "test_data" / "scenarios",
+    )
+
+    pkg_dir = datapackage_dir / "test_2050-el_eff"
+    assert pkg_dir.exists()
+
+    with (pkg_dir / "data/elements/electricity_demand.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # noqa: PLR2004
+        assert lines[0].strip() == "region;amount;bus;type;name"
+        assert lines[1].strip() == ";10;electricity;load;d1"
+
+    with (pkg_dir / "data/sequences/electricity_demand_profile.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 4  # noqa: PLR2004
+        assert lines[0].strip() == "timeindex;electricity-demand-profile"
+        assert lines[1].strip() == "2026-01-01 00:00:00;4.586600128650665"
+
+    shutil.rmtree(pkg_dir)

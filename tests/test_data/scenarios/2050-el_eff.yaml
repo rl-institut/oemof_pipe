@@ -1,0 +1,10 @@
+raw_dir: test_data/raw
+
+elements:
+  - path: single.csv
+    scenario: 2050-el_eff
+sequences:
+  - path: timeseries_single.csv
+    sequence_name: electricity_demand_profile
+    scenario: 2050-el_eff
+    scenario_column: scenario_key

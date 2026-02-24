@@ -1,3 +1,3 @@
 region;amount;bus;type;name
-;10;electricity;load;d1
+;;electricity;load;d1
 test_region;;;load;d2

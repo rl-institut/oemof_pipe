@@ -3,15 +3,59 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pathlib import Path
+import shutil
+from pathlib import Path
 
 import duckdb
+import yaml
 from frictionless import Package
 
 import settings
+
+
+def create_scenario(
+    datapackage_name: str,
+    scenario: str,
+    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    scenario_dir: Path = settings.SCENARIO_DIR,
+) -> None:
+    """Duplicate datapackage given by name and manipulate its data using scenario."""
+    # Copy datapackage as new datapackage with scenario name as suffix
+    scenario_datapackage = f"{datapackage_name}_{scenario}"
+    shutil.copytree(
+        datapackage_dir / datapackage_name,
+        datapackage_dir / scenario_datapackage,
+        dirs_exist_ok=True,
+    )
+
+    with (scenario_dir / f"{scenario}.yaml").open("r") as f:
+        scenario_data = yaml.safe_load(f)
+
+    raw_dir = (
+        Path(scenario_data["raw_dir"])
+        if "raw_dir" in scenario_data
+        else settings.RAW_DIR
+    )
+
+    elements = scenario_data.get("elements", [])
+    for element in elements:
+        path = raw_dir / element.pop("path")
+        apply_element_data(
+            data_path=path,
+            datapackage_name=scenario_datapackage,
+            datapackage_dir=datapackage_dir,
+            **element,
+        )
+
+    sequences = scenario_data.get("sequences", [])
+    for sequence in sequences:
+        path = raw_dir / sequence.pop("path")
+        apply_sequence_data(
+            data_path=path,
+            datapackage_name=scenario_datapackage,
+            datapackage_dir=datapackage_dir,
+            **sequence,
+        )
 
 
 def apply_element_data(
@@ -268,3 +312,7 @@ def _get_resource_by_name(
 
     res_full_path = datapackage_dir / datapackage_name / res.path
     return res_full_path
+
+
+if __name__ == "__main__":
+    create_scenario("adlershof_rebuild", "2050-el_eff")
