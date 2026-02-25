@@ -37,7 +37,6 @@ def create_blueprint(
     builder = PackageBuilder(blueprint_name, datapackage_dir)
 
     _create_elements(builder, blueprint_data)
-    builder.infer_sequences_from_resources()
     _create_sequences(builder, blueprint_data)
     builder.infer_busses_from_resources()
     builder.save_package()

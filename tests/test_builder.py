@@ -38,12 +38,11 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
     assert (pkg_dir / "datapackage.json").exists()
     assert (pkg_dir / "data/elements/liion_storage.csv").exists()
     assert (pkg_dir / "data/elements/electricity_demand.csv").exists()
-    assert (pkg_dir / "data/sequences/electricity_demand_profile.csv").exists()
 
     with (pkg_dir / "datapackage.json").open("r") as f:
         data = json.load(f)
         assert data["name"] == "test-pkg"
-        assert len(data["resources"]) == 4  # noqa: PLR2004
+        assert len(data["resources"]) == 3  # noqa: PLR2004
 
         res1 = next(r for r in data["resources"] if r["name"] == "electricity_demand")
         assert len(res1["schema"]["fields"]) == 5  # noqa: PLR2004
@@ -64,11 +63,6 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
         assert len(lines) == 2  # noqa: PLR2004
         assert lines[0].strip() == "region;amount;bus;type;name"
         assert lines[1].strip() == "BB;100;electricity;load;d1"
-
-    with (pkg_dir / "data/sequences/electricity_demand_profile.csv").open("r") as f:
-        lines = f.readlines()
-        assert len(lines) == 1
-        assert lines[0].strip() == "timeindex"
 
 
 def test_add_sequence_resource_and_save(tmp_path: pathlib.Path) -> None:

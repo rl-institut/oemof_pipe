@@ -303,7 +303,9 @@ class PackageBuilder:
             if isinstance(resource, SequenceResourceBuilder):
                 continue
             # Add resource for timeseries if at least one sequence is present
-            if resource.sequences:
+            if resource.sequences and any(
+                sequence in resource.fields for sequence in resource.sequences
+            ):
                 if f"{resource.name}_profile" in self.resources:
                     # Do not add sequence automatically if sequence with same name exists
                     continue

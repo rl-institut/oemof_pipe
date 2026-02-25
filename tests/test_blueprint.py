@@ -21,15 +21,12 @@ def test_blueprint_creation(tmp_path: Path) -> None:
     assert (expected_pkg_path / "data/elements/electricity_demand.csv").exists()
     assert (expected_pkg_path / "data/elements/liion_storage.csv").exists()
     assert (expected_pkg_path / "data/elements/chp.csv").exists()
-    assert (
-        expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
-    ).exists()
     assert (expected_pkg_path / "data/sequences/liion_storage_profile.csv").exists()
 
     with (expected_pkg_path / "datapackage.json").open("r") as f:
         data = json.load(f)
         assert data["name"] == "test"
-        assert len(data["resources"]) == 6  # noqa: PLR2004
+        assert len(data["resources"]) == 5  # noqa: PLR2004
 
     with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
         lines = f.readlines()
@@ -38,13 +35,6 @@ def test_blueprint_creation(tmp_path: Path) -> None:
         assert lines[1].strip() == ";electricity;bus;True"
         assert lines[2].strip() == ";oil;bus;True"
         assert lines[3].strip() == ";heat;bus;True"
-
-    with (expected_pkg_path / "data/sequences/electricity_demand_profile.csv").open(
-        "r",
-    ) as f:
-        lines = f.readlines()
-        assert len(lines) == 1
-        assert lines[0].strip() == "timeindex"
 
     with (expected_pkg_path / "data/elements/electricity_demand.csv").open("r") as f:
         lines = f.readlines()
@@ -62,7 +52,7 @@ def test_blueprint_creation(tmp_path: Path) -> None:
         assert lines[3].strip() == "2016-01-01 02:00:00;0;0;0"
 
 
-def test_regions_blueprint(tmp_path: Path) -> None:  # noqa: PLR0915
+def test_regions_blueprint(tmp_path: Path) -> None:
     """Load the region blueprint from test blueprints folder and create datapackage."""
     # Setup temporary directories
     pkg_dir = tmp_path / "datapackages"
@@ -80,13 +70,12 @@ def test_regions_blueprint(tmp_path: Path) -> None:  # noqa: PLR0915
     assert (
         expected_pkg_path / "data/sequences/electricity_demand_profile.csv"
     ).exists()
-    assert (expected_pkg_path / "data/sequences/heat_demand_profile.csv").exists()
     assert (expected_pkg_path / "data/sequences/liion_storage_profile.csv").exists()
 
     with (expected_pkg_path / "datapackage.json").open("r") as f:
         data = json.load(f)
         assert data["name"] == "regions"
-        assert len(data["resources"]) == 7  # noqa: PLR2004
+        assert len(data["resources"]) == 6  # noqa: PLR2004
 
     with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
         lines = f.readlines()
