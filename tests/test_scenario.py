@@ -6,8 +6,8 @@ from pathlib import Path
 
 import duckdb
 
-import scenario
-from scenario import apply_element_data, apply_sequence_data
+from oemof_pipe import scenario
+from oemof_pipe.scenario import apply_element_data, apply_sequence_data
 
 
 def test_apply_scenario_data_single(tmp_path: Path) -> None:

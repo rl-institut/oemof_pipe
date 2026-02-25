@@ -14,8 +14,8 @@ from pathlib import Path
 import duckdb
 import yaml
 
-import settings
-from builder import (
+from . import settings
+from .builder import (
     Component,
     ElementResourceBuilder,
     PackageBuilder,

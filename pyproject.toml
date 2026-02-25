@@ -10,6 +10,21 @@ dependencies = [
     "python-dotenv>=1.2.1",
 ]
 
+[build-system]
+requires = ["uv_build>=0.10.6,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+managed = true
+
+[tool.uv.build-backend]
+module-name = "oemof_pipe"
+module-root = ""
+
+
+[project.scripts]
+oemof-pipe = "oemof_pipe.main:main"
+
 # ==== ruff ====
 [tool.ruff]
 output-format = "concise"  # This enables file-links to errors in git console

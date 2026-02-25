@@ -4,8 +4,12 @@ import json
 import pathlib
 import datetime as dt
 
-import builder
-from builder import PackageBuilder, ElementResourceBuilder, SequenceResourceBuilder
+from oemof_pipe import builder
+from oemof_pipe.builder import (
+    PackageBuilder,
+    ElementResourceBuilder,
+    SequenceResourceBuilder,
+)
 
 
 def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:

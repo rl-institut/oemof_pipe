@@ -4,7 +4,7 @@ import json
 import pathlib
 from pathlib import Path
 
-from blueprint import create_blueprint
+from oemof_pipe.blueprint import create_blueprint
 
 
 def test_blueprint_creation(tmp_path: Path) -> None:

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sized
 from frictionless import Package, Resource, Schema
 import csv
-import settings
+from . import settings
 
 
 FRICTIONLESS_MAPPING = {

@@ -10,7 +10,7 @@ import duckdb
 import yaml
 from frictionless import Package
 
-import settings
+from . import settings
 
 
 def create_scenario(

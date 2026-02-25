@@ -2,8 +2,7 @@
 
 import argparse
 
-import blueprint
-import scenario
+from . import blueprint, scenario
 
 
 def blueprint_command(args: argparse.Namespace) -> None:
