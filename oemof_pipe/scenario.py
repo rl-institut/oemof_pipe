@@ -118,6 +118,9 @@ def apply_element_data(
             excluded_columns=["name", scenario_column, "id"],
         )
         if update_cols:
+            settings.logger.debug(
+                f"Updating columns {update_cols} for element '{res.name}'.",
+            )
             set_clause = ", ".join(
                 [f"{col} = data_table.{col}" for col in update_cols],
             )
