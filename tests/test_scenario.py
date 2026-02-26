@@ -142,11 +142,20 @@ def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
 
     con = duckdb.connect(database=":memory:")
     res = con.execute(
-        f"""SELECT "BB-d1-profile" FROM read_csv_auto('{csv_path}', sep=';') LIMIT 3""",
+        f"""SELECT * FROM read_csv_auto('{csv_path}', sep=';') LIMIT 3""",
     ).fetchall()
-    assert float(res[0][0]) == 4.586600128650665  # noqa: PLR2004
-    assert float(res[1][0]) == 4.047  # noqa: PLR2004
-    assert float(res[2][0]) == 3.3725000000000005  # noqa: PLR2004
+    assert float(res[0][1]) == 3  # noqa: PLR2004
+    assert float(res[1][1]) == 3  # noqa: PLR2004
+    assert float(res[2][1]) == 3  # noqa: PLR2004
+    assert float(res[0][2]) == 2  # noqa: PLR2004
+    assert float(res[1][2]) == 2  # noqa: PLR2004
+    assert float(res[2][2]) == 2  # noqa: PLR2004
+    assert float(res[0][3]) == 4  # noqa: PLR2004
+    assert float(res[1][3]) == 4  # noqa: PLR2004
+    assert float(res[2][3]) == 4  # noqa: PLR2004
+    assert float(res[0][4]) == 2  # noqa: PLR2004
+    assert float(res[1][4]) == 2  # noqa: PLR2004
+    assert float(res[2][4]) == 2  # noqa: PLR2004
 
 
 def test_create_scenario() -> None:

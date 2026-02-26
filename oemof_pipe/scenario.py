@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import product
 from dataclasses import dataclass
 import json
 import shutil
@@ -141,7 +142,10 @@ def apply_element_data(
                 f"Updating columns {update_cols} for element '{res.name}' from '{data_path}'.",
             )
             set_clause = ", ".join(
-                [f"{col} = data_table.{col}" for col in update_cols],
+                [
+                    f"{res_col} = data_table.{data_col}"
+                    for data_col, res_col in update_cols
+                ],
             )
             con.execute(
                 f"UPDATE resource_table SET {set_clause} FROM data_table "
@@ -217,7 +221,10 @@ def _apply_sequence_data_columnwise(
         )
 
         set_clause = ", ".join(
-            [f"{col} = data_table.{col}" for col in update_cols],
+            [
+                f'"{res_col}" = data_table."{data_col}"'
+                for data_col, res_col in update_cols
+            ],
         )
         con.execute(
             f"UPDATE resource_table SET {set_clause} FROM data_table "
@@ -266,46 +273,59 @@ def _apply_sequence_data_rowwise(
     ]
 
     # For each matching var_name in raw_table that exists as a column in resource_table
-    matching_vars = con.execute(
+    data_columns = con.execute(
         f"SELECT {var_name_col}, {series_col} FROM raw_table",
     ).fetchall()
 
-    for var_name, series_str in matching_vars:
-        if var_name in res_columns:
-            settings.logger.debug(
-                f"Updating column '{var_name}' in sequence '{resource.sequence_name}' from '{data_path}'.",
+    matching_columns = {}
+    for (data_column, series_str), res_column in product(data_columns, res_columns):
+        # This matches regions as well, as data column can be substring of resource column
+        # But only match if columns are equal or data column equals resource column with stripped region
+        # Otherwise false-positives like "B-d1-profile" is in "BB-d1-profile" can occur
+        if data_column in res_column and (
+            data_column == res_column
+            or (
+                len(res_column.split("-")) > 1
+                and data_column == res_column.split("-", 1)[1]
             )
+        ):
+            matching_columns[res_column] = series_str
 
-            # Parse the series_str which is a JSON-like list: "[val1, val2, ...]"
-            # We can use duckdb's json functions or just python's json.loads
-            series_list = json.loads(series_str)
+    for var_name, series_str in matching_columns.items():
+        settings.logger.debug(
+            f"Updating column '{var_name}' in sequence '{resource.sequence_name}' from '{data_path}'.",
+        )
 
-            # We need to update the column 'var_name' in 'resource_table'
-            # The resource_table has a 'timeindex' column. We assume the order of series_list
-            # matches the order of rows in resource_table.
-            # To do this safely in SQL, we can create a temporary table with the series data and join it.
+        # Parse the series_str which is a JSON-like list: "[val1, val2, ...]"
+        # We can use duckdb's json functions or just python's json.loads
+        series_list = json.loads(series_str)
 
-            con.execute(
-                "CREATE OR REPLACE TABLE series_data (idx INTEGER, val VARCHAR)",
+        # We need to update the column 'var_name' in 'resource_table'
+        # The resource_table has a 'timeindex' column. We assume the order of series_list
+        # matches the order of rows in resource_table.
+        # To do this safely in SQL, we can create a temporary table with the series data and join it.
+
+        con.execute(
+            "CREATE OR REPLACE TABLE series_data (idx INTEGER, val VARCHAR)",
+        )
+        con.executemany(
+            "INSERT INTO series_data VALUES (?, ?)",
+            [(i, str(val)) for i, val in enumerate(series_list)],
+        )
+
+        # Update resource_table using a CTE or temporary table with row numbers
+        con.execute(
+            f"""
+            WITH numbered_resource AS (
+                SELECT timeindex, row_number() OVER () - 1 as row_idx FROM resource_table
             )
-            con.executemany(
-                "INSERT INTO series_data VALUES (?, ?)",
-                [(i, str(val)) for i, val in enumerate(series_list)],
-            )
-
-            # Update resource_table using a CTE or temporary table with row numbers
-            con.execute(
-                f"""
-                WITH numbered_resource AS (
-                    SELECT timeindex, row_number() OVER () - 1 as row_idx FROM resource_table
-                )
-                UPDATE resource_table
-                SET "{var_name}" = series_data.val
-                FROM numbered_resource, series_data
-                WHERE numbered_resource.row_idx = series_data.idx
-                AND resource_table.timeindex = numbered_resource.timeindex
-                """,
-            )
+            UPDATE resource_table
+            SET "{var_name}" = series_data.val
+            FROM numbered_resource, series_data
+            WHERE numbered_resource.row_idx = series_data.idx
+            AND resource_table.timeindex = numbered_resource.timeindex
+            """,
+        )
 
     # Save back to CSV
     con.execute(f"COPY resource_table TO '{resource.path}' (HEADER, DELIMITER ';')")
@@ -314,21 +334,33 @@ def _apply_sequence_data_rowwise(
 def _get_update_columns(
     con: duckdb.DuckDBPyConnection,
     excluded_columns: list[str],
-) -> list[str]:
+) -> list[tuple[str, str]]:
     res_columns = [
         col[1] for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
     ]
 
     # Find which columns from source_table exist in resource_table (excluding name, scenario, id, etc.)
-    source_columns = [
+    data_columns = [
         col[1] for col in con.execute("PRAGMA table_info('data_table')").fetchall()
     ]
-    update_cols = [
-        col
-        for col in source_columns
-        if col in res_columns and col not in excluded_columns
-    ]
-    return update_cols
+
+    update_columns = []
+    for data_column, res_column in product(data_columns, res_columns):
+        if data_column in excluded_columns:
+            continue
+        # This matches regions as well, as data column can be substring of resource column
+        # But only match if columns are equal or data column equals resource column with stripped region
+        # Otherwise false-positives like "B-d1-profile" is in "BB-d1-profile" can occur
+        if data_column in res_column and (
+            data_column == res_column
+            or (
+                len(res_column.split("-")) > 1
+                and data_column == res_column.split("-", 1)[1]
+            )
+        ):
+            update_columns.append((data_column, res_column))
+
+    return update_columns
 
 
 def _get_resource_by_name(
