@@ -37,6 +37,29 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     assert res[0] == 99  # noqa: PLR2004
 
 
+def test_apply_scenario_data_with_different_regions(tmp_path: Path) -> None:
+    """Test applying blueprint data in single format."""
+    tmp_package_dir = tmp_path / "datapackages"
+    datapackage_dir = (
+        pathlib.Path(__file__).parent / "test_data" / "datapackages" / "regions"
+    )
+    shutil.copytree(datapackage_dir, tmp_package_dir / "regions")
+
+    data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "single.csv"
+    apply_element_data(data_path, "regions", "ALL", datapackage_dir=tmp_package_dir)
+
+    with (tmp_package_dir / "regions/data/elements/electricity_demand.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 5  # noqa: PLR2004
+        assert lines[0].strip() == "amount;bus;profile;region;type;name"
+        assert lines[1].strip() == "10;BB-electricity;BB-d1-profile;BB;load;BB-d1"
+        assert lines[2].strip() == "10;B-electricity;B-d1-profile;B;load;B-d1"
+        assert lines[3].strip() == "6;;BB-d2-profile;BB;load;BB-d2"
+        assert lines[4].strip() == "5;;B-d2-profile;B;load;B-d2"
+
+
 def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
     """Test applying blueprint data in multiple format."""
     tmp_package_dir = tmp_path / "datapackages"

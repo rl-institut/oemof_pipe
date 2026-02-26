@@ -144,7 +144,8 @@ def apply_element_data(
                 [f"{col} = data_table.{col}" for col in update_cols],
             )
             con.execute(
-                f"UPDATE resource_table SET {set_clause} FROM data_table WHERE resource_table.name = data_table.name",
+                f"UPDATE resource_table SET {set_clause} FROM data_table "
+                f"WHERE resource_table.name = data_table.name OR resource_table.name LIKE '%-' || data_table.name;",
             )
 
             # Save back to CSV

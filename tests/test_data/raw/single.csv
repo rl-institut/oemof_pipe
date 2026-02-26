@@ -1,4 +1,5 @@
 id;scenario;name;var_name;carrier;region;tech;type;var_value;var_unit;source;comment
 0;ALL;d1;amount;biomass;AD;gt;conversion;10;MW;;Green field assumption
-1;ALL;d2;region;h2;AD;boiler_large;conversion;test_region;MW;;Green field assumption
+1;ALL;B-d2;amount;h2;AD;boiler_large;conversion;5;MW;;Green field assumption
+1;ALL;BB-d2;amount;h2;AD;boiler_large;conversion;6;MW;;Green field assumption
 2;ALL;liion;capacity;h2;AD;boiler_small;conversion;99;MW;;Green field assumption
