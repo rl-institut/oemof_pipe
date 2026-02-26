@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 import yaml
 from frictionless import Package
 
@@ -62,7 +63,7 @@ def create_scenario(
     for element in elements:
         path = raw_dir / element.pop("path")
         apply_element_data(
-            data_path=path,
+            data_source=path,
             datapackage_name=scenario_datapackage,
             datapackage_dir=datapackage_dir,
             **element,
@@ -72,7 +73,7 @@ def create_scenario(
     for sequence in sequences:
         path = raw_dir / sequence.pop("path")
         apply_sequence_data(
-            data_path=path,
+            data_source=path,
             datapackage_name=scenario_datapackage,
             datapackage_dir=datapackage_dir,
             **sequence,
@@ -83,7 +84,7 @@ def create_scenario(
 
 
 def apply_element_data(
-    data_path: Path | str,
+    data_source: Path | str | pd.DataFrame,
     datapackage_name: str,
     scenario: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
@@ -93,15 +94,21 @@ def apply_element_data(
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage using DuckDB."""
     settings.logger.info(
-        f"Applying element data from '{data_path}' with scenario filter '{scenario}' on '{datapackage_name}'.",
+        f"Applying element data from '{data_source}' with scenario filter '{scenario}' on '{datapackage_name}'.",
     )
     con = duckdb.connect(database=":memory:")
 
     # Register data CSV as a table and filter by scenario
-    con.execute(
-        f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "
-        f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
-    )
+    if isinstance(data_source, pd.DataFrame):
+        con.execute(
+            f"CREATE TABLE raw_table AS SELECT * FROM data_source "
+            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
+        )
+    else:
+        con.execute(
+            f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True) "
+            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
+        )
 
     # Check if raw_table contains var_name and var_value columns
     columns = [
@@ -139,7 +146,7 @@ def apply_element_data(
         )
         if update_cols:
             settings.logger.debug(
-                f"Updating columns {update_cols} for element '{res.name}' from '{data_path}'.",
+                f"Updating columns {update_cols} for element '{res.name}' from '{data_source}'.",
             )
             set_clause = ", ".join(
                 [
@@ -161,7 +168,7 @@ def apply_element_data(
 
 
 def apply_sequence_data(  # noqa: PLR0913
-    data_path: Path | str,
+    data_source: Path | str | pd.DataFrame,
     datapackage_name: str,
     sequence_name: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
@@ -172,41 +179,50 @@ def apply_sequence_data(  # noqa: PLR0913
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     settings.logger.info(
-        f"Applying sequence data from '{data_path}' with scenario filter '{scenario}' "
+        f"Applying sequence data from '{data_source}' with scenario filter '{scenario}' "
         f"on sequence '{sequence_name}' in '{datapackage_name}'.",
     )
 
     con = duckdb.connect(database=":memory:")
 
+    if isinstance(data_source, pd.DataFrame):
+        describe_query = "DESCRIBE SELECT * FROM data_source"
+    else:
+        describe_query = f"DESCRIBE SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True)"
+
     columns = [
         column[0]
         for column in con.execute(
-            f"DESCRIBE SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",
+            describe_query,
         ).fetchall()
     ]
     resource = ResourceHandler(datapackage_name, sequence_name, datapackage_dir)
     if var_name_col in columns and series_col in columns:
         _apply_sequence_data_rowwise(
-            data_path=data_path,
+            data_path=data_source,
             resource=resource,
             scenario=scenario,
             scenario_column=scenario_column,
             var_name_col=var_name_col,
             series_col=series_col,
         )
-    _apply_sequence_data_columnwise(data_path, resource)
+    else:
+        _apply_sequence_data_columnwise(data_source, resource)
 
 
 def _apply_sequence_data_columnwise(
-    data_path: Path | str,
+    data_source: Path | str | pd.DataFrame,
     resource: ResourceHandler,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     con = duckdb.connect(database=":memory:")
     # Load source data
-    con.execute(
-        f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",
-    )
+    if isinstance(data_source, pd.DataFrame):
+        con.execute("CREATE TABLE data_table AS SELECT * FROM data_source")
+    else:
+        con.execute(
+            f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True)",
+        )
 
     # Load existing resource data
     con.execute(
@@ -217,7 +233,7 @@ def _apply_sequence_data_columnwise(
     update_cols = _get_update_columns(con, excluded_columns=["timeindex"])
     if update_cols:
         settings.logger.debug(
-            f"Updating columns {update_cols} in sequence '{resource.sequence_name}' from '{data_path}'.",
+            f"Updating columns {update_cols} in sequence '{resource.sequence_name}' from '{data_source}'.",
         )
 
         set_clause = ", ".join(
@@ -238,7 +254,7 @@ def _apply_sequence_data_columnwise(
 
 
 def _apply_sequence_data_rowwise(
-    data_path: Path | str,
+    data_path: Path | str | pd.DataFrame,
     resource: ResourceHandler,
     scenario: str = "ALL",
     scenario_column: str = "scenario_key",
@@ -255,10 +271,16 @@ def _apply_sequence_data_rowwise(
     con = duckdb.connect(database=":memory:")
 
     # Load source data and filter by scenario
-    con.execute(
-        f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "
-        f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
-    )
+    if isinstance(data_path, pd.DataFrame):
+        con.execute(
+            f"CREATE TABLE raw_table AS SELECT * FROM data_path "
+            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
+        )
+    else:
+        con.execute(
+            f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "
+            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
+        )
 
     # Load existing resource data
     con.execute(
@@ -291,14 +313,14 @@ def _apply_sequence_data_rowwise(
         ):
             matching_columns[res_column] = series_str
 
-    for var_name, series_str in matching_columns.items():
+    for var_name, series in matching_columns.items():
         settings.logger.debug(
             f"Updating column '{var_name}' in sequence '{resource.sequence_name}' from '{data_path}'.",
         )
 
         # Parse the series_str which is a JSON-like list: "[val1, val2, ...]"
         # We can use duckdb's json functions or just python's json.loads
-        series_list = json.loads(series_str)
+        series_list = series if isinstance(series, list) else json.loads(series)
 
         # We need to update the column 'var_name' in 'resource_table'
         # The resource_table has a 'timeindex' column. We assume the order of series_list

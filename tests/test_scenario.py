@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 
 from oemof_pipe import scenario
 from oemof_pipe.scenario import apply_element_data, apply_sequence_data
@@ -35,6 +36,69 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
         f"SELECT capacity FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",
     ).fetchone()
     assert res[0] == 99  # noqa: PLR2004
+
+
+def test_apply_scenario_data_from_df(tmp_path: Path) -> None:
+    """Test applying blueprint data in single format."""
+    tmp_package_dir = tmp_path / "datapackages"
+    datapackage_dir = (
+        pathlib.Path(__file__).parent / "test_data" / "datapackages" / "test"
+    )
+    shutil.copytree(datapackage_dir, tmp_package_dir / "test")
+
+    data = pd.DataFrame([{"scenario": "ALL", "name": "d1", "amount": 22}])
+    apply_element_data(data, "test", "ALL", datapackage_dir=tmp_package_dir)
+
+    data = pd.DataFrame(
+        [
+            {
+                "scenario": "ALL",
+                "name": "electricity-demand-profile",
+                "var_name": "electricity-demand-profile",
+                "series": [31, 32, 33],
+            },
+        ],
+    )
+    apply_sequence_data(
+        data,
+        "test",
+        "electricity_demand_profile",
+        datapackage_dir=tmp_package_dir,
+    )
+
+    data = pd.DataFrame(
+        {
+            "timeindex": [
+                "2026-01-01 00:00:00",
+                "2026-01-01 01:00:00",
+                "2026-01-01 02:00:00",
+            ],
+            "b": [55, 56, 57],
+        },
+    )
+    apply_sequence_data(
+        data,
+        "test",
+        "electricity_demand_profile",
+        datapackage_dir=tmp_package_dir,
+    )
+
+    con = duckdb.connect(database=":memory:")
+
+    csv_path = tmp_package_dir / "test" / "data/elements/electricity_demand.csv"
+    res = con.execute(
+        f"SELECT amount FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'd1'",
+    ).fetchone()
+    assert res[0] == 22  # noqa: PLR2004
+
+    csv_path = (
+        tmp_package_dir / "test" / "data/sequences/electricity_demand_profile.csv"
+    )
+    res = con.execute(
+        f"SELECT * FROM read_csv_auto('{csv_path}', sep=';')",
+    ).fetchall()
+    assert res[0][1] == 31  # noqa: PLR2004
+    assert res[0][2] == 55  # noqa: PLR2004
 
 
 def test_apply_scenario_data_with_different_regions(tmp_path: Path) -> None:
@@ -169,14 +233,6 @@ def test_create_scenario() -> None:
         assert lines[0].strip() == "region;amount;bus;type;name"
         assert lines[1].strip() == ";;electricity;load;d1"
 
-    with (datapackage_dir / "test/data/sequences/electricity_demand_profile.csv").open(
-        "r",
-    ) as f:
-        lines = f.readlines()
-        assert len(lines) == 4  # noqa: PLR2004
-        assert lines[0].strip() == "timeindex;electricity-demand-profile"
-        assert lines[1].strip() == "2026-01-01 00:00:00;0"
-
     scenario.create_scenario(
         "test",
         scenario="2050-el_eff",
@@ -196,7 +252,7 @@ def test_create_scenario() -> None:
     with (pkg_dir / "data/sequences/electricity_demand_profile.csv").open("r") as f:
         lines = f.readlines()
         assert len(lines) == 4  # noqa: PLR2004
-        assert lines[0].strip() == "timeindex;electricity-demand-profile"
-        assert lines[1].strip() == "2026-01-01 00:00:00;4.586600128650665"
+        assert lines[0].strip() == "timeindex;electricity-demand-profile;b"
+        assert lines[1].strip() == "2026-01-01 00:00:00;4.586600128650665;0"
 
     shutil.rmtree(pkg_dir)
