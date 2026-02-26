@@ -138,7 +138,7 @@ def apply_element_data(
         )
         if update_cols:
             settings.logger.debug(
-                f"Updating columns {update_cols} for element '{res.name}'.",
+                f"Updating columns {update_cols} for element '{res.name}' from '{data_path}'.",
             )
             set_clause = ", ".join(
                 [f"{col} = data_table.{col}" for col in update_cols],
@@ -212,7 +212,7 @@ def _apply_sequence_data_columnwise(
     update_cols = _get_update_columns(con, excluded_columns=["timeindex"])
     if update_cols:
         settings.logger.debug(
-            f"Updating columns {update_cols} in sequence '{resource.sequence_name}'",
+            f"Updating columns {update_cols} in sequence '{resource.sequence_name}' from '{data_path}'.",
         )
 
         set_clause = ", ".join(
@@ -272,7 +272,7 @@ def _apply_sequence_data_rowwise(
     for var_name, series_str in matching_vars:
         if var_name in res_columns:
             settings.logger.debug(
-                f"Updating column '{var_name}' in sequence '{resource.sequence_name}'",
+                f"Updating column '{var_name}' in sequence '{resource.sequence_name}' from '{data_path}'.",
             )
 
             # Parse the series_str which is a JSON-like list: "[val1, val2, ...]"
