@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import shutil
 from pathlib import Path
@@ -11,6 +12,24 @@ import yaml
 from frictionless import Package
 
 from . import settings
+
+
+@dataclass
+class ResourceHandler:
+    """Handle resource paths."""
+
+    datapackage_name: str
+    sequence_name: str
+    datapackage_dir: Path
+
+    @property
+    def path(self) -> Path:
+        """Return path to resource."""
+        return _get_resource_by_name(
+            self.datapackage_name,
+            self.sequence_name,
+            self.datapackage_dir,
+        )
 
 
 def create_scenario(
@@ -151,11 +170,6 @@ def apply_sequence_data(  # noqa: PLR0913
         f"Applying sequence data from '{data_path}' with scenario filter '{scenario}' "
         f"on sequence '{sequence_name}' in '{datapackage_name}'.",
     )
-    res_full_path = _get_resource_by_name(
-        datapackage_name,
-        sequence_name,
-        datapackage_dir,
-    )
 
     con = duckdb.connect(database=":memory:")
 
@@ -165,19 +179,23 @@ def apply_sequence_data(  # noqa: PLR0913
             f"DESCRIBE SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True)",
         ).fetchall()
     ]
+    resource = ResourceHandler(datapackage_name, sequence_name, datapackage_dir)
     if var_name_col in columns and series_col in columns:
         _apply_sequence_data_rowwise(
             data_path=data_path,
-            resource_path=res_full_path,
+            resource=resource,
             scenario=scenario,
             scenario_column=scenario_column,
             var_name_col=var_name_col,
             series_col=series_col,
         )
-    _apply_sequence_data_columnwise(data_path, res_full_path)
+    _apply_sequence_data_columnwise(data_path, resource)
 
 
-def _apply_sequence_data_columnwise(data_path: Path | str, resource_path: Path) -> None:
+def _apply_sequence_data_columnwise(
+    data_path: Path | str,
+    resource: ResourceHandler,
+) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     con = duckdb.connect(database=":memory:")
     # Load source data
@@ -187,12 +205,16 @@ def _apply_sequence_data_columnwise(data_path: Path | str, resource_path: Path) 
 
     # Load existing resource data
     con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource_path}', sep=';', all_varchar=True)",
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource.path}', sep=';', all_varchar=True)",
     )
 
     # Find matching columns
     update_cols = _get_update_columns(con, excluded_columns=["timeindex"])
     if update_cols:
+        settings.logger.debug(
+            f"Updating columns {update_cols} in sequence '{resource.sequence_name}'",
+        )
+
         set_clause = ", ".join(
             [f"{col} = data_table.{col}" for col in update_cols],
         )
@@ -203,13 +225,13 @@ def _apply_sequence_data_columnwise(data_path: Path | str, resource_path: Path) 
 
         # Save back to CSV
         con.execute(
-            f"COPY resource_table TO '{resource_path}' (HEADER, DELIMITER ';')",
+            f"COPY resource_table TO '{resource.path}' (HEADER, DELIMITER ';')",
         )
 
 
 def _apply_sequence_data_rowwise(
     data_path: Path | str,
-    resource_path: Path,
+    resource: ResourceHandler,
     scenario: str = "ALL",
     scenario_column: str = "scenario_key",
     var_name_col: str = "var_name",
@@ -232,7 +254,7 @@ def _apply_sequence_data_rowwise(
 
     # Load existing resource data
     con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource_path}', sep=';', all_varchar=True)",
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource.path}', sep=';', all_varchar=True)",
     )
 
     # Get all column names from resource_table except timeindex
@@ -249,6 +271,10 @@ def _apply_sequence_data_rowwise(
 
     for var_name, series_str in matching_vars:
         if var_name in res_columns:
+            settings.logger.debug(
+                f"Updating column '{var_name}' in sequence '{resource.sequence_name}'",
+            )
+
             # Parse the series_str which is a JSON-like list: "[val1, val2, ...]"
             # We can use duckdb's json functions or just python's json.loads
             series_list = json.loads(series_str)
@@ -281,7 +307,7 @@ def _apply_sequence_data_rowwise(
             )
 
     # Save back to CSV
-    con.execute(f"COPY resource_table TO '{resource_path}' (HEADER, DELIMITER ';')")
+    con.execute(f"COPY resource_table TO '{resource.path}' (HEADER, DELIMITER ';')")
 
 
 def _get_update_columns(
