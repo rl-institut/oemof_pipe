@@ -137,7 +137,7 @@ def apply_element_data(
         )
         if update_cols:
             settings.logger.debug(
-                f"Updating columns {update_cols} for element '{res.name}' from '{data_source}'.",
+                f"Updating columns {[col[0] for col in update_cols]} for element '{res.name}' from '{data_source}'.",
             )
             set_clause = ", ".join(
                 [
@@ -259,7 +259,8 @@ def _apply_sequence_data_columnwise(
     update_cols = _get_update_columns(con, excluded_columns=["timeindex"])
     if update_cols:
         settings.logger.debug(
-            f"Updating columns {update_cols} in sequence '{resource.sequence_name}' from '{data_source}'.",
+            f"Updating columns {[col[0] for col in update_cols]} "
+            f"in sequence '{resource.sequence_name}' from '{data_source}'.",
         )
 
         set_clause = ", ".join(
