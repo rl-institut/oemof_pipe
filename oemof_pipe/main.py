@@ -2,7 +2,7 @@
 
 import argparse
 
-from . import blueprint, scenario
+from oemof_pipe import blueprint, scenario
 
 
 def blueprint_command(args: argparse.Namespace) -> None:
