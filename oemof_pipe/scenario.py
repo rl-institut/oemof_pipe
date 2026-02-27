@@ -110,12 +110,26 @@ def apply_element_data(
     if is_single_format:
         # Single format: pivot the data_table to get one row per name
         con.execute(
-            f"CREATE TABLE data_table AS PIVOT ("
-            f"SELECT name, {scenario_column}, {var_name_col}, {var_value_col} FROM raw_table"
+            f"CREATE TABLE data_table AS "
+            f"PIVOT ("
+            f"SELECT DISTINCT ON (name, {var_name_col}) name, {scenario_column}, {var_name_col}, {var_value_col} "
+            f"FROM raw_table"
             f") ON {var_name_col} USING ANY_VALUE({var_value_col})",
         )
+        # Merge multiple rows into one row under one name
+        attributes = [
+            col[1]
+            for col in con.execute("PRAGMA table_info('data_table')").fetchall()
+            if col[1] not in ("name", "scenario")
+        ]
+        attribute_clause = ",".join(f"MAX({attr}) AS {attr}" for attr in attributes)
+        con.execute(
+            f"CREATE OR REPLACE TABLE data_table AS SELECT name, {attribute_clause} FROM data_table GROUP BY name;",
+        )
     else:
-        con.execute("CREATE TABLE data_table AS SELECT * FROM raw_table")
+        con.execute(
+            "CREATE TABLE data_table AS SELECT DISTINCT ON (name) * FROM raw_table",
+        )
 
     pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
     pkg = Package(pkg_path, allow_invalid=True)
@@ -163,13 +177,13 @@ def import_data_table(
     data_source: Path | str | DataFrame,
     scenario: str | list[str],
     scenario_column: str,
-    distinct_column: str = "name",
+    distinct_columns: list[str] | None = None,
 ) -> None:
     """Register data as a table and filter by scenario."""
     scenarios = [scenario] if isinstance(scenario, str) else scenario
     if "ALL" not in scenarios:
         scenarios.insert(0, "ALL")
-    scenario_lookup = ",".join(f"'{scenario}'" for scenario in scenarios)
+    scenario_lookup = ", ".join(f"'{scenario}'" for scenario in scenarios)
     case_expr = (
         "CASE "
         + " ".join(
@@ -177,16 +191,19 @@ def import_data_table(
         )
         + " END"
     )
+    distinct_clause = (
+        f"DISTINCT ON ({', '.join(distinct_columns)})" if distinct_columns else ""
+    )
     if isinstance(data_source, pd.DataFrame):
         con.execute(
-            f"CREATE TABLE raw_table AS SELECT DISTINCT ON ({distinct_column}) * FROM data_source "
+            f"CREATE TABLE raw_table AS SELECT {distinct_clause} * FROM data_source "
             f"WHERE {scenario_column} IN ({scenario_lookup}) "
             f"ORDER BY {case_expr} DESC;",
         )
     else:
         con.execute(
             f"CREATE TABLE raw_table AS "
-            f"SELECT DISTINCT ON ({distinct_column}) * "
+            f"SELECT {distinct_clause} * "
             f"FROM read_csv_auto('{data_source}', sep=';', all_varchar=True) "
             f"WHERE {scenario_column} IN ({scenario_lookup}) "
             f"ORDER BY {case_expr} DESC;",
@@ -301,7 +318,7 @@ def _apply_sequence_data_rowwise(
         data_source,
         scenario,
         scenario_column,
-        distinct_column="var_name",
+        distinct_columns=["var_name"],
     )
 
     # Load existing resource data
