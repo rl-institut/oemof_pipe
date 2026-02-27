@@ -1,5 +1,7 @@
 id_ts;scenario_key;name;var_name;carrier;region;tech;type;timeindex_start;timeindex_stop;timeindex_resolution;series;var_unit;source;comment
 0;2050-el_eff;;BB-d1-profile;;AD;;;2050-01-01 00:00:00;2050-12-31 23:00:00;h;[4, 4, 4];MW;raw;
 0;2050-el_eff;;B-d1-profile;;AD;;;2050-01-01 00:00:00;2050-12-31 23:00:00;h;[3, 3, 3];MW;raw;
+0;ALL;;d2-profile;;AD;;;2050-01-01 00:00:00;2050-12-31 23:00:00;h;[1, 1, 1];MW;raw;
 0;2050-el_eff;;d2-profile;;AD;;;2050-01-01 00:00:00;2050-12-31 23:00:00;h;[2, 2, 2];MW;raw;
+0;2050-base;;d2-profile;;AD;;;2050-01-01 00:00:00;2050-12-31 23:00:00;h;[1, 1, 1];MW;raw;
 1;2050-el_eff;;electricity-demand-profile;;AD;;;2050-01-01 00:00:00;2050-12-31 23:00:00;h;[4.586600128650665, 4.047, 3.3725000000000005];MW;raw;

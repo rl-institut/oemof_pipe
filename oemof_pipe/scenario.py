@@ -12,6 +12,7 @@ import duckdb
 import pandas as pd
 import yaml
 from frictionless import Package
+from pandas import DataFrame
 
 from . import settings
 
@@ -86,7 +87,7 @@ def create_scenario(
 def apply_element_data(
     data_source: Path | str | pd.DataFrame,
     datapackage_name: str,
-    scenario: str,
+    scenario: str | list[str],
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
     scenario_column: str = "scenario",
     var_name_col: str = "var_name",
@@ -96,19 +97,9 @@ def apply_element_data(
     settings.logger.info(
         f"Applying element data from '{data_source}' with scenario filter '{scenario}' on '{datapackage_name}'.",
     )
-    con = duckdb.connect(database=":memory:")
 
-    # Register data CSV as a table and filter by scenario
-    if isinstance(data_source, pd.DataFrame):
-        con.execute(
-            f"CREATE TABLE raw_table AS SELECT * FROM data_source "
-            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
-        )
-    else:
-        con.execute(
-            f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True) "
-            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
-        )
+    con = duckdb.connect(database=":memory:")
+    import_data_table(con, data_source, scenario, scenario_column)
 
     # Check if raw_table contains var_name and var_value columns
     columns = [
@@ -167,12 +158,47 @@ def apply_element_data(
         con.execute("DROP TABLE IF EXISTS resource_table")
 
 
+def import_data_table(
+    con: duckdb.DuckDBPyConnection,
+    data_source: Path | str | DataFrame,
+    scenario: str | list[str],
+    scenario_column: str,
+    distinct_column: str = "name",
+) -> None:
+    """Register data as a table and filter by scenario."""
+    scenarios = [scenario] if isinstance(scenario, str) else scenario
+    if "ALL" not in scenarios:
+        scenarios.insert(0, "ALL")
+    scenario_lookup = ",".join(f"'{scenario}'" for scenario in scenarios)
+    case_expr = (
+        "CASE "
+        + " ".join(
+            f"WHEN {scenario_column} = '{s}' THEN {i}" for i, s in enumerate(scenarios)
+        )
+        + " END"
+    )
+    if isinstance(data_source, pd.DataFrame):
+        con.execute(
+            f"CREATE TABLE raw_table AS SELECT DISTINCT ON ({distinct_column}) * FROM data_source "
+            f"WHERE {scenario_column} IN ({scenario_lookup}) "
+            f"ORDER BY {case_expr} DESC;",
+        )
+    else:
+        con.execute(
+            f"CREATE TABLE raw_table AS "
+            f"SELECT DISTINCT ON ({distinct_column}) * "
+            f"FROM read_csv_auto('{data_source}', sep=';', all_varchar=True) "
+            f"WHERE {scenario_column} IN ({scenario_lookup}) "
+            f"ORDER BY {case_expr} DESC;",
+        )
+
+
 def apply_sequence_data(  # noqa: PLR0913
     data_source: Path | str | pd.DataFrame,
     datapackage_name: str,
     sequence_name: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
-    scenario: str = "ALL",
+    scenario: str | list[str] = "ALL",
     scenario_column: str = "scenario",
     var_name_col: str = "var_name",
     series_col: str = "series",
@@ -199,7 +225,7 @@ def apply_sequence_data(  # noqa: PLR0913
     resource = ResourceHandler(datapackage_name, sequence_name, datapackage_dir)
     if var_name_col in columns and series_col in columns:
         _apply_sequence_data_rowwise(
-            data_path=data_source,
+            data_source=data_source,
             resource=resource,
             scenario=scenario,
             scenario_column=scenario_column,
@@ -254,9 +280,9 @@ def _apply_sequence_data_columnwise(
 
 
 def _apply_sequence_data_rowwise(
-    data_path: Path | str | pd.DataFrame,
+    data_source: Path | str | pd.DataFrame,
     resource: ResourceHandler,
-    scenario: str = "ALL",
+    scenario: str | list[str] = "ALL",
     scenario_column: str = "scenario_key",
     var_name_col: str = "var_name",
     series_col: str = "series",
@@ -269,18 +295,13 @@ def _apply_sequence_data_rowwise(
     The 'series_col' column must contain a list of values (e.g. '[1.0, 2.0, 3.0]').
     """
     con = duckdb.connect(database=":memory:")
-
-    # Load source data and filter by scenario
-    if isinstance(data_path, pd.DataFrame):
-        con.execute(
-            f"CREATE TABLE raw_table AS SELECT * FROM data_path "
-            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
-        )
-    else:
-        con.execute(
-            f"CREATE TABLE raw_table AS SELECT * FROM read_csv_auto('{data_path}', sep=';', all_varchar=True) "
-            f"WHERE {scenario_column} = '{scenario}' OR {scenario_column} = 'ALL'",
-        )
+    import_data_table(
+        con,
+        data_source,
+        scenario,
+        scenario_column,
+        distinct_column="var_name",
+    )
 
     # Load existing resource data
     con.execute(
@@ -315,7 +336,7 @@ def _apply_sequence_data_rowwise(
 
     for var_name, series in matching_columns.items():
         settings.logger.debug(
-            f"Updating column '{var_name}' in sequence '{resource.sequence_name}' from '{data_path}'.",
+            f"Updating column '{var_name}' in sequence '{resource.sequence_name}' from '{data_source}'.",
         )
 
         # Parse the series_str which is a JSON-like list: "[val1, val2, ...]"

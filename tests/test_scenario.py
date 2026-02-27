@@ -20,7 +20,12 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     shutil.copytree(datapackage_dir, tmp_package_dir / "test")
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "single.csv"
-    apply_element_data(data_path, "test", "ALL", datapackage_dir=tmp_package_dir)
+    apply_element_data(
+        data_path,
+        "test",
+        ["2050-base", "2050-el_eff"],
+        datapackage_dir=tmp_package_dir,
+    )
 
     # Verify electricity_demand (l1) amount changed from default (none) to 10
     con = duckdb.connect(database=":memory:")
@@ -35,7 +40,7 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     res = con.execute(
         f"SELECT capacity FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",
     ).fetchone()
-    assert res[0] == 99  # noqa: PLR2004
+    assert res[0] == 93  # noqa: PLR2004
 
 
 def test_apply_scenario_data_from_df(tmp_path: Path) -> None:
@@ -110,7 +115,12 @@ def test_apply_scenario_data_with_different_regions(tmp_path: Path) -> None:
     shutil.copytree(datapackage_dir, tmp_package_dir / "regions")
 
     data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "single.csv"
-    apply_element_data(data_path, "regions", "ALL", datapackage_dir=tmp_package_dir)
+    apply_element_data(
+        data_path,
+        "regions",
+        ["2050-base", "2050-el_eff"],
+        datapackage_dir=tmp_package_dir,
+    )
 
     with (tmp_package_dir / "regions/data/elements/electricity_demand.csv").open(
         "r",
@@ -196,7 +206,7 @@ def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
         "regions",
         "electricity_demand_profile",
         datapackage_dir=tmp_package_dir,
-        scenario="2050-el_eff",
+        scenario=["2050-base", "2050-el_eff"],
         scenario_column="scenario_key",
     )
 
