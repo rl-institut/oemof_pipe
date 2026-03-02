@@ -232,6 +232,37 @@ def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
     assert float(res[2][4]) == 2  # noqa: PLR2004
 
 
+def test_apply_sequence_data_with_mapping(tmp_path: Path) -> None:
+    """Test applying sequence data with mapped column names to an existing datapackage."""
+    tmp_package_dir = tmp_path / "datapackages"
+    datapackage_dir = (
+        pathlib.Path(__file__).parent / "test_data" / "datapackages" / "mapping"
+    )
+    shutil.copytree(datapackage_dir, tmp_package_dir / "mapping")
+
+    data_path = pathlib.Path(__file__).parent / "test_data" / "raw" / "mapping.csv"
+
+    apply_sequence_data(
+        data_path,
+        "mapping",
+        "electricity_demand_profile",
+        datapackage_dir=tmp_package_dir,
+        mapping={"time": "timeindex", "demand": "electricity-demand-profile"},
+    )
+
+    csv_path = (
+        tmp_package_dir / "mapping" / "data/sequences/electricity_demand_profile.csv"
+    )
+
+    con = duckdb.connect(database=":memory:")
+    res = con.execute(
+        f"""SELECT * FROM read_csv_auto('{csv_path}', sep=';') LIMIT 3""",
+    ).fetchall()
+    assert float(res[0][1]) == 5  # noqa: PLR2004
+    assert float(res[1][1]) == 6  # noqa: PLR2004
+    assert float(res[2][1]) == 7  # noqa: PLR2004
+
+
 def test_create_scenario() -> None:
     """Test applying scenario setup on datapackage."""
     datapackage_dir = pathlib.Path(__file__).parent / "test_data" / "datapackages"

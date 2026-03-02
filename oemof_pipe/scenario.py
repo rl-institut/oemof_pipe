@@ -219,12 +219,15 @@ def apply_sequence_data(  # noqa: PLR0913
     scenario_column: str = "scenario",
     var_name_col: str = "var_name",
     series_col: str = "series",
+    mapping: dict[str, str] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     settings.logger.info(
         f"Applying sequence data from '{data_source}' with scenario filter '{scenario}' "
         f"on sequence '{sequence_name}' in '{datapackage_name}'.",
     )
+
+    mapping = mapping if mapping else {}
 
     con = duckdb.connect(database=":memory:")
 
@@ -241,6 +244,10 @@ def apply_sequence_data(  # noqa: PLR0913
     ]
     resource = ResourceHandler(datapackage_name, sequence_name, datapackage_dir)
     if var_name_col in columns and series_col in columns:
+        if mapping:
+            settings.logger.warning(
+                "Mapping is currently only supported for columnwise sequences.",
+            )
         _apply_sequence_data_rowwise(
             data_source=data_source,
             resource=resource,
@@ -250,21 +257,29 @@ def apply_sequence_data(  # noqa: PLR0913
             series_col=series_col,
         )
     else:
-        _apply_sequence_data_columnwise(data_source, resource)
+        _apply_sequence_data_columnwise(data_source, resource, mapping)
 
 
 def _apply_sequence_data_columnwise(
     data_source: Path | str | pd.DataFrame,
     resource: ResourceHandler,
+    mapping: dict[str, str],
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     con = duckdb.connect(database=":memory:")
+
     # Load source data
     if isinstance(data_source, pd.DataFrame):
         con.execute("CREATE TABLE data_table AS SELECT * FROM data_source")
     else:
         con.execute(
             f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True)",
+        )
+
+    if mapping:
+        select_clause = get_mapping_clause(con, "data_table", mapping)
+        con.execute(
+            f"CREATE OR REPLACE TABLE data_table AS SELECT {select_clause} FROM data_table",
         )
 
     # Load existing resource data
@@ -422,6 +437,27 @@ def _get_update_columns(
             update_columns.append((data_column, res_column))
 
     return update_columns
+
+
+def get_mapping_clause(
+    con: duckdb.DuckDBPyConnection,
+    table_name: str,
+    mapping: dict[str, str],
+) -> str:
+    """Return select clause to map column names."""
+    # Get all columns from data_source
+    all_cols = con.execute(f"DESCRIBE SELECT * FROM {table_name}").fetchall()
+
+    # Build list of all columns, applying mapping where applicable
+    col_list = []
+    for col_name, *_ in all_cols:
+        if col_name in mapping:
+            col_list.append(f'"{col_name}" AS "{mapping[col_name]}"')
+        else:
+            col_list.append(f'"{col_name}"')
+
+    select_clause = ", ".join(col_list)
+    return select_clause
 
 
 def _get_resource_by_name(
