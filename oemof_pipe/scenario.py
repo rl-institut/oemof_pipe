@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import json
 import shutil
 from pathlib import Path
+from typing import Any
 
 import duckdb
 import pandas as pd
@@ -84,7 +85,7 @@ def create_scenario(
     )
 
 
-def apply_element_data(
+def apply_element_data(  # noqa: PLR0913
     data_source: Path | str | pd.DataFrame,
     datapackage_name: str,
     scenario: str | list[str],
@@ -92,6 +93,7 @@ def apply_element_data(
     scenario_column: str = "scenario",
     var_name_col: str = "var_name",
     var_value_col: str = "var_value",
+    csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage using DuckDB."""
     settings.logger.info(
@@ -99,7 +101,7 @@ def apply_element_data(
     )
 
     con = duckdb.connect(database=":memory:")
-    import_data_table(con, data_source, scenario, scenario_column)
+    import_data_table(con, data_source, scenario, scenario_column, csv_options)
 
     # Check if raw_table contains var_name and var_value columns
     columns = [
@@ -141,7 +143,7 @@ def apply_element_data(
 
         # Load resource into a table
         con.execute(
-            f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}', sep=';', all_varchar=True)",
+            f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}')",
         )
 
         # Find matching columns
@@ -178,6 +180,7 @@ def import_data_table(
     scenario: str | list[str],
     scenario_column: str,
     distinct_columns: list[str] | None = None,
+    csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Register data as a table and filter by scenario."""
     scenarios = [scenario] if isinstance(scenario, str) else scenario
@@ -201,10 +204,11 @@ def import_data_table(
             f"ORDER BY {case_expr} DESC;",
         )
     else:
+        csv_clause = _get_csv_option_clause(csv_options)
         con.execute(
             f"CREATE TABLE raw_table AS "
             f"SELECT {distinct_clause} * "
-            f"FROM read_csv_auto('{data_source}', sep=';', all_varchar=True) "
+            f"FROM read_csv_auto('{data_source}'{csv_clause}) "
             f"WHERE {scenario_column} IN ({scenario_lookup}) "
             f"ORDER BY {case_expr} DESC;",
         )
@@ -220,6 +224,7 @@ def apply_sequence_data(  # noqa: PLR0913
     var_name_col: str = "var_name",
     series_col: str = "series",
     mapping: dict[str, str] | None = None,
+    csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     settings.logger.info(
@@ -234,7 +239,8 @@ def apply_sequence_data(  # noqa: PLR0913
     if isinstance(data_source, pd.DataFrame):
         describe_query = "DESCRIBE SELECT * FROM data_source"
     else:
-        describe_query = f"DESCRIBE SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True)"
+        csv_clause = _get_csv_option_clause(csv_options)
+        describe_query = f"DESCRIBE SELECT * FROM read_csv('{data_source}'{csv_clause})"
 
     columns = [
         column[0]
@@ -255,15 +261,17 @@ def apply_sequence_data(  # noqa: PLR0913
             scenario_column=scenario_column,
             var_name_col=var_name_col,
             series_col=series_col,
+            csv_options=csv_options,
         )
     else:
-        _apply_sequence_data_columnwise(data_source, resource, mapping)
+        _apply_sequence_data_columnwise(data_source, resource, mapping, csv_options)
 
 
 def _apply_sequence_data_columnwise(
     data_source: Path | str | pd.DataFrame,
     resource: ResourceHandler,
     mapping: dict[str, str],
+    csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
     con = duckdb.connect(database=":memory:")
@@ -272,19 +280,20 @@ def _apply_sequence_data_columnwise(
     if isinstance(data_source, pd.DataFrame):
         con.execute("CREATE TABLE data_table AS SELECT * FROM data_source")
     else:
+        csv_clause = _get_csv_option_clause(csv_options)
         con.execute(
-            f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_source}', sep=';', all_varchar=True)",
+            f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_source}'{csv_clause})",
         )
 
     if mapping:
-        select_clause = get_mapping_clause(con, "data_table", mapping)
+        select_clause = _get_mapping_clause(con, "data_table", mapping)
         con.execute(
             f"CREATE OR REPLACE TABLE data_table AS SELECT {select_clause} FROM data_table",
         )
 
     # Load existing resource data
     con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource.path}', sep=';', all_varchar=True)",
+        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource.path}')",
     )
 
     # Find matching columns
@@ -319,6 +328,7 @@ def _apply_sequence_data_rowwise(
     scenario_column: str = "scenario_key",
     var_name_col: str = "var_name",
     series_col: str = "series",
+    csv_options: dict[str, Any] | None = None,
 ) -> None:
     """
     Apply scenario data from CSV to an existing datapackage.
@@ -334,6 +344,7 @@ def _apply_sequence_data_rowwise(
         scenario,
         scenario_column,
         distinct_columns=["var_name"],
+        csv_options=csv_options,
     )
 
     # Load existing resource data
@@ -439,7 +450,7 @@ def _get_update_columns(
     return update_columns
 
 
-def get_mapping_clause(
+def _get_mapping_clause(
     con: duckdb.DuckDBPyConnection,
     table_name: str,
     mapping: dict[str, str],
@@ -458,6 +469,14 @@ def get_mapping_clause(
 
     select_clause = ", ".join(col_list)
     return select_clause
+
+
+def _get_csv_option_clause(csv_options: dict[str, Any] | None) -> str:
+    """Return option clause to read CSV file in DuckDB."""
+    if csv_options is None:
+        return ""
+    clause = ", ".join(f"{k}={v}" for k, v in csv_options.items())
+    return f", {clause}"
 
 
 def _get_resource_by_name(

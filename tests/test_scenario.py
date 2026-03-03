@@ -248,6 +248,7 @@ def test_apply_sequence_data_with_mapping(tmp_path: Path) -> None:
         "electricity_demand_profile",
         datapackage_dir=tmp_package_dir,
         mapping={"time": "timeindex", "demand": "electricity-demand-profile"},
+        csv_options={"skip": 1},
     )
 
     csv_path = (
