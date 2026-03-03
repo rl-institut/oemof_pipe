@@ -295,6 +295,6 @@ def test_create_scenario() -> None:
         lines = f.readlines()
         assert len(lines) == 4  # noqa: PLR2004
         assert lines[0].strip() == "timeindex;electricity-demand-profile;b"
-        assert lines[1].strip() == "2026-01-01 00:00:00;4.586600128650665;0"
+        assert lines[1].strip() == "2026-01-01 00:00:00;4.586600128650665;0.0"
 
     shutil.rmtree(pkg_dir)

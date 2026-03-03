@@ -18,22 +18,48 @@ from pandas import DataFrame
 from . import settings
 
 
+FRICTIONLESS_TO_DUCKDB_MAPPING = {"datetime": "TIMESTAMP", "number": "DOUBLE"}
+
+
 @dataclass
 class ResourceHandler:
     """Handle resource paths."""
 
     datapackage_name: str
     sequence_name: str
-    datapackage_dir: Path
+    datapackage_dir: Path = settings.DATAPACKAGE_DIR
+
+    def __post_init__(self) -> None:
+        """Read resource after initialization."""
+        self.resource = self._get_resource_by_name()
 
     @property
     def path(self) -> Path:
         """Return path to resource."""
-        return _get_resource_by_name(
-            self.datapackage_name,
-            self.sequence_name,
-            self.datapackage_dir,
-        )
+        return self.datapackage_dir / self.datapackage_name / self.resource.path
+
+    def _get_resource_by_name(self) -> Path:
+        """Find and return a datapackage resource by name."""
+        pkg_path = self.datapackage_dir / self.datapackage_name / "datapackage.json"
+        pkg = Package(pkg_path, allow_invalid=True)
+
+        # Find the resource by name
+        res = None
+        for resource in pkg.resources:
+            if resource.name == self.sequence_name:
+                res = resource
+                break
+
+        if res is None:
+            msg = f"Resource '{self.sequence_name}' not found in datapackage."
+            raise ValueError(msg)
+
+        return res
+
+    @property
+    def schema(self) -> dict[str, Any]:
+        """Return resource schema definition."""
+        return self.resource.schema
 
 
 def create_scenario(
@@ -292,9 +318,7 @@ def _apply_sequence_data_columnwise(
         )
 
     # Load existing resource data
-    con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource.path}')",
-    )
+    import_sequence_table(con, resource)
 
     # Find matching columns
     update_cols = _get_update_columns(con, excluded_columns=["timeindex"])
@@ -319,6 +343,31 @@ def _apply_sequence_data_columnwise(
         con.execute(
             f"COPY resource_table TO '{resource.path}' (HEADER, DELIMITER ';')",
         )
+
+
+def import_sequence_table(
+    con: duckdb.DuckDBPyConnection,
+    resource: ResourceHandler,
+) -> None:
+    """Load resource table into DuckDB."""
+    columns = con.execute(
+        f"DESCRIBE SELECT * FROM read_csv_auto('{resource.path}', sep=';', all_varchar=True)",
+    ).fetchall()
+    col_list = []
+    for col_name, *_ in columns:
+        col_list.append(
+            (
+                "timeindex"
+                if col_name == "timeindex"
+                else f'CAST("{col_name}" AS DOUBLE) AS "{col_name}"'
+            ),
+        )
+
+    select_clause = ", ".join(col_list)
+    con.execute(
+        f"CREATE TABLE resource_table AS SELECT {select_clause} "
+        f"FROM read_csv_auto('{resource.path}', sep=';', all_varchar=True)",
+    )
 
 
 def _apply_sequence_data_rowwise(
@@ -347,10 +396,7 @@ def _apply_sequence_data_rowwise(
         csv_options=csv_options,
     )
 
-    # Load existing resource data
-    con.execute(
-        f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{resource.path}', sep=';', all_varchar=True)",
-    )
+    import_sequence_table(con, resource)
 
     # Get all column names from resource_table except timeindex
     res_columns = [
@@ -475,32 +521,11 @@ def _get_csv_option_clause(csv_options: dict[str, Any] | None) -> str:
     """Return option clause to read CSV file in DuckDB."""
     if csv_options is None:
         return ""
-    clause = ", ".join(f"{k}={v}" for k, v in csv_options.items())
+    clause = ", ".join(
+        f"{k}='{v}'" if isinstance(v, str) else f"{k}={v}"
+        for k, v in csv_options.items()
+    )
     return f", {clause}"
-
-
-def _get_resource_by_name(
-    datapackage_name: str,
-    sequence_name: str,
-    datapackage_dir: Path = settings.DATAPACKAGE_DIR,
-) -> Path:
-    """Find and return a datapackage resource by name."""
-    pkg_path = datapackage_dir / datapackage_name / "datapackage.json"
-    pkg = Package(pkg_path, allow_invalid=True)
-
-    # Find the resource by name
-    res = None
-    for resource in pkg.resources:
-        if resource.name == sequence_name:
-            res = resource
-            break
-
-    if res is None:
-        msg = f"Resource '{sequence_name}' not found in datapackage."
-        raise ValueError(msg)
-
-    res_full_path = datapackage_dir / datapackage_name / res.path
-    return res_full_path
 
 
 if __name__ == "__main__":
