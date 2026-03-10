@@ -25,6 +25,9 @@ The package is run via `main.py` and provides two main commands: `blueprint` and
 To create a new datapackage based on a blueprint:
 
 ```bash
+# with installed package:
+oemof-pipe blueprint <blueprint_name>
+# or with plain python:
 python main.py blueprint <blueprint_name>
 ```
 
@@ -35,6 +38,9 @@ This will look for a file named `<blueprint_name>.yaml` in the `blueprints/` dir
 To create a scenario based on an existing datapackage:
 
 ```bash
+# with installed package:
+oemof-pipe scenario <datapackage_name> <scenario_name>
+# or with plain python:
 python main.py scenario <datapackage_name> <scenario_name>
 ```
 
