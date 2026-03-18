@@ -62,6 +62,25 @@ class ResourceHandler:
         return self.resource.schema
 
 
+def get_duckdb_connection() -> duckdb.DuckDBPyConnection:
+    """Get duckdb connection."""
+    con = duckdb.connect(database=":memory:")
+    if settings.S3_ENDPOINT and settings.S3_ACCES_KEY and settings.S3_SECRET_KEY:
+        con.execute(
+            "CREATE OR REPLACE SECRET secret ("
+            "TYPE s3, "
+            "PROVIDER config, "
+            f"ENDPOINT '{settings.S3_ENDPOINT}', "
+            f"KEY_ID '{settings.S3_ACCES_KEY}', "
+            f"SECRET '{settings.S3_SECRET_KEY}', "
+            "REGION 'us-east-1', "
+            "URL_STYLE 'path', "
+            "USE_SSL false"
+            ");",
+        )
+    return con
+
+
 def create_scenario(
     datapackage_name: str,
     scenario: str,
@@ -89,7 +108,8 @@ def create_scenario(
 
     elements = scenario_data.get("elements", [])
     for element in elements:
-        path = raw_dir / element.pop("path")
+        path = element.pop("path")
+        path = raw_dir / path if not path.startswith("s3://") else path
         apply_element_data(
             data_source=path,
             datapackage_name=scenario_datapackage,
@@ -99,7 +119,8 @@ def create_scenario(
 
     sequences = scenario_data.get("sequences", [])
     for sequence in sequences:
-        path = raw_dir / sequence.pop("path")
+        path = sequence.pop("path")
+        path = raw_dir / path if not path.startswith("s3://") else path
         apply_sequence_data(
             data_source=path,
             datapackage_name=scenario_datapackage,
@@ -126,7 +147,7 @@ def apply_element_data(  # noqa: PLR0913
         f"Applying element data from '{data_source}' with scenario filter '{scenario}' on '{datapackage_name}'.",
     )
 
-    con = duckdb.connect(database=":memory:")
+    con = get_duckdb_connection()
     import_data_table(con, data_source, scenario, scenario_column, csv_options)
 
     # Check if raw_table contains var_name and var_value columns
@@ -260,7 +281,7 @@ def apply_sequence_data(  # noqa: PLR0913
 
     mapping = mapping if mapping else {}
 
-    con = duckdb.connect(database=":memory:")
+    con = get_duckdb_connection()
 
     if isinstance(data_source, pd.DataFrame):
         describe_query = "DESCRIBE SELECT * FROM data_source"
@@ -300,7 +321,7 @@ def _apply_sequence_data_columnwise(
     csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
-    con = duckdb.connect(database=":memory:")
+    con = get_duckdb_connection()
 
     # Load source data
     if isinstance(data_source, pd.DataFrame):
@@ -386,7 +407,7 @@ def _apply_sequence_data_rowwise(
     Filters by 'scenario' in 'scenario_column'.
     The 'series_col' column must contain a list of values (e.g. '[1.0, 2.0, 3.0]').
     """
-    con = duckdb.connect(database=":memory:")
+    con = get_duckdb_connection()
     import_data_table(
         con,
         data_source,

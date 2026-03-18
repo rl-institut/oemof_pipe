@@ -3,10 +3,10 @@
 import os
 import sys
 import pathlib
-from dotenv import load_dotenv
+import dotenv
 from loguru import logger
 
-load_dotenv()
+dotenv.load_dotenv(dotenv.find_dotenv(usecwd=True))
 
 COMPONENTS_DIR = pathlib.Path(
     os.environ.get("COMPONENTS_DIR", pathlib.Path(__file__).parent / "components"),
@@ -31,3 +31,8 @@ if DEBUG:
     logger.info("Running oemof-pipe in debug mode.")
 else:
     logger.add(sys.stderr, level="INFO")
+
+# S3 Support in duckDB
+S3_ENDPOINT = os.environ.get("S3_ENDPOINT")
+S3_ACCES_KEY = os.environ.get("S3_ACCES_KEY")
+S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY")
