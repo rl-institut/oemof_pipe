@@ -65,13 +65,13 @@ class ResourceHandler:
 def get_duckdb_connection() -> duckdb.DuckDBPyConnection:
     """Get duckdb connection."""
     con = duckdb.connect(database=":memory:")
-    if settings.S3_ENDPOINT and settings.S3_ACCES_KEY and settings.S3_SECRET_KEY:
+    if settings.S3_ENDPOINT and settings.S3_ACCESS_KEY and settings.S3_SECRET_KEY:
         con.execute(
             "CREATE OR REPLACE SECRET secret ("
             "TYPE s3, "
             "PROVIDER config, "
             f"ENDPOINT '{settings.S3_ENDPOINT}', "
-            f"KEY_ID '{settings.S3_ACCES_KEY}', "
+            f"KEY_ID '{settings.S3_ACCESS_KEY}', "
             f"SECRET '{settings.S3_SECRET_KEY}', "
             "REGION 'us-east-1', "
             "URL_STYLE 'path', "
