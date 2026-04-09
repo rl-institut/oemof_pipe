@@ -36,6 +36,19 @@ def hourly_range(start: dt.datetime, periods: int) -> Iterator[dt.datetime]:
         current += dt.timedelta(hours=1)
 
 
+def get_component(component_name: str) -> dict[str, Any]:
+    """Get component from components directory or custom component directory if set."""
+    filename = f"{component_name}.yaml"
+    if (
+        settings.CUSTOM_COMPONENTS_DIR is not None
+        and (settings.CUSTOM_COMPONENTS_DIR / filename).exists()
+    ):
+        with (settings.CUSTOM_COMPONENTS_DIR / filename).open("r") as f:
+            return yaml.safe_load(f)
+    with (settings.COMPONENTS_DIR / filename).open("r") as f:
+        return yaml.safe_load(f)
+
+
 @dataclass
 class Component:
     """Dataclass to represent components."""
@@ -46,27 +59,15 @@ class Component:
     sequences: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_name(
-        cls,
-        component_name: str,
-        component_dir: Path = settings.COMPONENTS_DIR,
-    ) -> Component:
+    def from_name(cls, component_name: str) -> Component:
         """Create component looking up name in components directory."""
-        with (component_dir / f"{component_name}.yaml").open("r") as f:
-            data = yaml.safe_load(f)
+        data = get_component(component_name)
         return cls(
             name=component_name,
             attributes=data.get("attributes", {}),
             busses=data.get("busses", []) or [],
             sequences=data.get("sequences", []) or [],
         )
-
-
-def get_available_components(
-    component_dir: Path = settings.COMPONENTS_DIR,
-) -> list[str]:
-    """Read components defined in components directory."""
-    return [f.stem for f in component_dir.glob("*.yaml")]
 
 
 def map_to_frictionless_resource(

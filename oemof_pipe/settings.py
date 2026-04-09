@@ -8,8 +8,11 @@ from loguru import logger
 
 dotenv.load_dotenv(dotenv.find_dotenv(usecwd=True))
 
-COMPONENTS_DIR = pathlib.Path(
-    os.environ.get("COMPONENTS_DIR", pathlib.Path(__file__).parent / "components"),
+COMPONENTS_DIR = pathlib.Path(__file__).parent / "components"
+CUSTOM_COMPONENTS_DIR = (
+    pathlib.Path(os.environ["COMPONENTS_DIR"])
+    if "COMPONENTS_DIR" in os.environ
+    else None
 )
 DATAPACKAGE_DIR = pathlib.Path(
     os.environ.get("DATAPACKAGE_DIR", pathlib.Path.cwd() / "datapackages"),
