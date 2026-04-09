@@ -91,7 +91,7 @@ def _add_instances(  # noqa: C901
         for sequence_field in set(sequences + component.sequences):
             if sequence_field in instance_data or sequence_field not in attributes:
                 continue
-            instance_data[sequence_field] = f"{instance_data['name']}-profile"
+            instance_data[sequence_field] = f"{instance_data['name']}-{sequence_field}"
         return instance_data
 
     def adapt_regions_in_busses(instance_data: dict) -> dict:
@@ -141,16 +141,9 @@ def _create_sequences(builder: PackageBuilder, blueprint_data: dict) -> None:
 
     # Add sequences explicitly set in blueprint file
     sequences = blueprint_data.get("sequences", {})
-    for res_name, config in sequences.items():
+    for res_name in sequences:
         # Create resource builder
         resource = SequenceResourceBuilder(resource_name=res_name, timeindex=timeindex)
-
-        # Add all instances to resource if timeindex exists
-        if timeindex:
-            columns = config.get("columns", [])
-            for column in columns:
-                resource.add_instance(column, [0 for _ in range(len(timeindex))])
-
         builder.add_resource(resource)
 
     _add_default_profiles(builder, timeindex)

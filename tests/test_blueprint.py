@@ -48,8 +48,8 @@ def test_blueprint_creation(tmp_path: Path) -> None:
     ) as f:
         lines = f.readlines()
         assert len(lines) == 8761  # noqa: PLR2004
-        assert lines[0].strip() == "timeindex;efficiency;loss_rate;liion-profile"
-        assert lines[3].strip() == "2016-01-01 02:00:00;0;0;0"
+        assert lines[0].strip() == "timeindex;liion-efficiency;liion-loss_rate"
+        assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
 
 
 def test_regions_blueprint(tmp_path: Path) -> None:
@@ -121,5 +121,5 @@ def test_regions_blueprint(tmp_path: Path) -> None:
     ) as f:
         lines = f.readlines()
         assert len(lines) == 8761  # noqa: PLR2004
-        assert lines[0].strip() == "timeindex;efficiency;loss_rate;B-liion-profile"
-        assert lines[3].strip() == "2016-01-01 02:00:00;0;0;0"
+        assert lines[0].strip() == "timeindex;B-liion-efficiency;B-liion-loss_rate"
+        assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
