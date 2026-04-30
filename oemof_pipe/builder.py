@@ -225,7 +225,12 @@ class ElementResourceBuilder:
 class SequenceResourceBuilder:
     """Class to build sequence resources."""
 
-    def __init__(self, resource_name: str, timeindex: Sized | None = None) -> None:
+    def __init__(
+        self,
+        resource_name: str,
+        timeindex: Sized | None = None,
+        timeindex_format: str | None = None,
+    ) -> None:
         """Init."""
         self.name: str = resource_name
         self.fields: dict[str, dict[str, Any]] = {
@@ -236,6 +241,8 @@ class SequenceResourceBuilder:
                 "description": "Current timestep",
             },
         }
+        if timeindex_format:
+            self.fields["timeindex"]["format"] = timeindex_format
         self.timeindex = timeindex or list(
             hourly_range(start=dt.datetime(2026, 1, 1), periods=8760),
         )

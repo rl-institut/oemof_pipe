@@ -131,6 +131,7 @@ def _add_instances(  # noqa: C901
 def _create_sequences(builder: PackageBuilder, blueprint_data: dict) -> None:
     """Add sequences from blueprint data to package builder."""
     timeindex_info = blueprint_data.get("timeindex", {})
+    timeindex_format = timeindex_info.get("format")
     timeindex = list(
         (
             hourly_range(timeindex_info["start"], timeindex_info["periods"])
@@ -143,13 +144,21 @@ def _create_sequences(builder: PackageBuilder, blueprint_data: dict) -> None:
     sequences = blueprint_data.get("sequences", {})
     for res_name in sequences:
         # Create resource builder
-        resource = SequenceResourceBuilder(resource_name=res_name, timeindex=timeindex)
+        resource = SequenceResourceBuilder(
+            resource_name=res_name,
+            timeindex=timeindex,
+            timeindex_format=timeindex_format,
+        )
         builder.add_resource(resource)
 
-    _add_default_profiles(builder, timeindex)
+    _add_default_profiles(builder, timeindex, timeindex_format)
 
 
-def _add_default_profiles(builder: PackageBuilder, timeindex: list[datetime]) -> None:
+def _add_default_profiles(
+    builder: PackageBuilder,
+    timeindex: list[datetime],
+    timeindex_format: str | None,
+) -> None:
     """Add default sequences from resource instances."""
     for resource in list(builder.resources.values()):
         if isinstance(resource, SequenceResourceBuilder):
@@ -168,7 +177,11 @@ def _add_default_profiles(builder: PackageBuilder, timeindex: list[datetime]) ->
             for sequence in sorted(sequences):
                 if sequence_name not in builder.resources:
                     builder.add_resource(
-                        SequenceResourceBuilder(sequence_name, timeindex),
+                        SequenceResourceBuilder(
+                            sequence_name,
+                            timeindex,
+                            timeindex_format,
+                        ),
                     )
                 builder.resources[sequence_name].add_instance(
                     sequence,
