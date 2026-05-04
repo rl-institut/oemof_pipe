@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 from dataclasses import dataclass, field
 import yaml
 from pathlib import Path
@@ -362,4 +363,24 @@ class PackageBuilder:
             resource.save(self.base_dir)
             package.add_resource(map_to_frictionless_resource(resource))
 
-        package.to_json(str(self.base_dir / "datapackage.json"))
+        # Foriegn key field references must be flatten due to oemof.tabular
+        datapackage_json = package.to_dict()
+        for resource in datapackage_json["resources"]:
+            cleaned_foreign_keys = []
+            for fk in resource["schema"]["foreignKeys"]:
+                field = fk["fields"][0] if fk["fields"] else ""
+                ref_field = (
+                    fk["reference"]["fields"][0] if fk["reference"]["fields"] else ""
+                )
+                cleaned_foreign_keys.append(
+                    {
+                        "fields": field,
+                        "reference": {
+                            "fields": ref_field,
+                            "resource": fk["reference"]["resource"],
+                        },
+                    },
+                )
+            resource["schema"]["foreignKeys"] = cleaned_foreign_keys
+        with (self.base_dir / "datapackage.json").open("w") as f:
+            json.dump(datapackage_json, f, indent=2)
