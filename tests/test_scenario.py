@@ -202,7 +202,7 @@ def test_apply_scenario_data_multiple_wo_scenario(tmp_path: Path) -> None:
     apply_element_data(
         data_path,
         "test",
-        column_mapping={"tech": "name"},
+        column_mapping={"tech": "name", "loss_rate (kWh/h)": "loss_rate"},
         datapackage_dir=tmp_package_dir,
     )
 
@@ -219,7 +219,7 @@ def test_apply_scenario_data_multiple_wo_scenario(tmp_path: Path) -> None:
         f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",
     ).fetchone()
     assert float(res[0]) == 0.5  # noqa: PLR2004
-    assert float(res[1]) == 0.1  # noqa: PLR2004
+    assert float(res[1]) == 0.33  # noqa: PLR2004
 
 
 def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:

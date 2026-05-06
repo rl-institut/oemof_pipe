@@ -268,7 +268,7 @@ def import_data_table(
     columns = "*"
     if column_mapping:
         for name, new_name in column_mapping.items():
-            columns += f", {name} AS {new_name}"
+            columns += f', "{name}" AS {new_name}'
 
     if isinstance(data_source, pd.DataFrame):
         con.execute(
