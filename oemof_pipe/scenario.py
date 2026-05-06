@@ -159,6 +159,7 @@ def apply_element_data(  # noqa: PLR0913
         data_source,
         scenario,
         scenario_column,
+        name_column=name_column,
         csv_options=csv_options,
     )
 
@@ -170,7 +171,7 @@ def apply_element_data(  # noqa: PLR0913
 
     if is_single_format:
         # Single format: pivot the data_table to get one row per name
-        columns = f"{name_column} AS name, {var_name_col}, {var_value_col}"
+        columns = f"name, {var_name_col}, {var_value_col}"
         if scenario:
             columns += f", {scenario_column}"
         con.execute(
@@ -241,6 +242,7 @@ def import_data_table(
     data_source: Path | str | DataFrame,
     scenario: str | list[str] | None = None,
     scenario_column: str | None = None,
+    name_column: str | None = "name",
     distinct_columns: list[str] | None = None,
     csv_options: dict[str, Any] | None = None,
 ) -> None:
@@ -265,14 +267,14 @@ def import_data_table(
     )
     if isinstance(data_source, pd.DataFrame):
         con.execute(
-            f"CREATE TABLE raw_table AS SELECT {distinct_clause} * FROM data_source"
+            f"CREATE TABLE raw_table AS SELECT {distinct_clause} {name_column} AS name, * FROM data_source"
             + scenario_query,
         )
     else:
         csv_clause = _get_csv_option_clause(csv_options)
         con.execute(
             f"CREATE TABLE raw_table AS "
-            f"SELECT {distinct_clause} * "
+            f"SELECT {distinct_clause} {name_column} AS name, * "
             f"FROM read_csv_auto('{data_source}'{csv_clause}) " + scenario_query,
         )
 

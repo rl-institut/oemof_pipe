@@ -188,6 +188,40 @@ def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
     assert float(res[1]) == 0.1  # noqa: PLR2004
 
 
+def test_apply_scenario_data_multiple_wo_scenario(tmp_path: Path) -> None:
+    """Test applying blueprint data in multiple format."""
+    tmp_package_dir = tmp_path / "datapackages"
+    datapackage_dir = (
+        pathlib.Path(__file__).parent / "test_data" / "datapackages" / "test"
+    )
+    shutil.copytree(datapackage_dir, tmp_package_dir / "test")
+
+    data_path = (
+        pathlib.Path(__file__).parent / "test_data" / "raw" / "multiple_wo_scenario.csv"
+    )
+    apply_element_data(
+        data_path,
+        "test",
+        name_column="tech",
+        datapackage_dir=tmp_package_dir,
+    )
+
+    # In test.yaml, liion instances only have region and capacity.
+    # To test efficiency update, we'd need to add efficiency to attributes in test.yaml or have it inferred.
+    # By default, Component.from_name("storage").attributes includes efficiency.
+    # But in test.yaml, liion_storage doesn't specify attributes, so it uses all from storage.yaml.
+
+    con = duckdb.connect(database=":memory:")
+    csv_path = tmp_package_dir / "test" / "data/elements/liion_storage.csv"
+
+    # Check if efficiency was updated
+    res = con.execute(
+        f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'liion'",
+    ).fetchone()
+    assert float(res[0]) == 0.5  # noqa: PLR2004
+    assert float(res[1]) == 0.1  # noqa: PLR2004
+
+
 def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:
     """Test applying sequence data to an existing datapackage."""
     tmp_package_dir = tmp_path / "datapackages"
