@@ -137,6 +137,7 @@ def apply_element_data(  # noqa: PLR0913
     datapackage_name: str,
     scenario: str | list[str] | None = None,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    name_column: str = "name",
     scenario_column: str = "scenario",
     var_name_col: str = "var_name",
     var_value_col: str = "var_value",
@@ -169,7 +170,7 @@ def apply_element_data(  # noqa: PLR0913
 
     if is_single_format:
         # Single format: pivot the data_table to get one row per name
-        columns = f"name, {var_name_col}, {var_value_col}"
+        columns = f"{name_column} AS name, {var_name_col}, {var_value_col}"
         if scenario:
             columns += f", {scenario_column}"
         con.execute(
@@ -183,7 +184,7 @@ def apply_element_data(  # noqa: PLR0913
         attributes = [
             col[1]
             for col in con.execute("PRAGMA table_info('data_table')").fetchall()
-            if col[1] not in ("name", "scenario")
+            if col[1] not in ("name", scenario_column)
         ]
         attribute_clause = ",".join(f"MAX({attr}) AS {attr}" for attr in attributes)
         con.execute(

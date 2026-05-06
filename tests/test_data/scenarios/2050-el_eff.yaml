@@ -4,6 +4,7 @@ elements:
   - path: single.csv
     scenario: 2050-el_eff
   - path: single_wo_scenario.csv
+    name_column: component
 sequences:
   - path: timeseries_single.csv
     sequence_name: electricity_demand_profile

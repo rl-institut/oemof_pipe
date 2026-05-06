@@ -57,6 +57,7 @@ def test_apply_scenario_data_single_wo_scenario(tmp_path: Path) -> None:
     apply_element_data(
         data_path,
         "test",
+        name_column="component",
         datapackage_dir=tmp_package_dir,
     )
 
