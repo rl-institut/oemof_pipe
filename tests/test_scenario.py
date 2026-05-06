@@ -43,6 +43,32 @@ def test_apply_scenario_data_single(tmp_path: Path) -> None:
     assert res[0] == 93  # noqa: PLR2004
 
 
+def test_apply_scenario_data_single_wo_scenario(tmp_path: Path) -> None:
+    """Test applying blueprint data in single format."""
+    tmp_package_dir = tmp_path / "datapackages"
+    datapackage_dir = (
+        pathlib.Path(__file__).parent / "test_data" / "datapackages" / "test"
+    )
+    shutil.copytree(datapackage_dir, tmp_package_dir / "test")
+
+    data_path = (
+        pathlib.Path(__file__).parent / "test_data" / "raw" / "single_wo_scenario.csv"
+    )
+    apply_element_data(
+        data_path,
+        "test",
+        datapackage_dir=tmp_package_dir,
+    )
+
+    # Verify electricity_demand (l1) amount changed from default (none) to 10
+    con = duckdb.connect(database=":memory:")
+    csv_path = tmp_package_dir / "test" / "data/elements/electricity_demand.csv"
+    res = con.execute(
+        f"SELECT amount FROM read_csv_auto('{csv_path}', sep=';') WHERE name = 'd1'",
+    ).fetchone()
+    assert res[0] == 100  # noqa: PLR2004
+
+
 def test_apply_scenario_data_from_df(tmp_path: Path) -> None:
     """Test applying blueprint data in single format."""
     tmp_package_dir = tmp_path / "datapackages"
@@ -289,7 +315,7 @@ def test_create_scenario() -> None:
         lines = f.readlines()
         assert len(lines) == 3  # noqa: PLR2004
         assert lines[0].strip() == "region;amount;bus;type;name"
-        assert lines[1].strip() == ";10;electricity;load;d1"
+        assert lines[1].strip() == ";100;electricity;load;d1"
 
     with (pkg_dir / "data/sequences/electricity_demand_profile.csv").open("r") as f:
         lines = f.readlines()

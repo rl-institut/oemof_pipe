@@ -135,7 +135,7 @@ def create_scenario(
 def apply_element_data(  # noqa: PLR0913
     data_source: Path | str | pd.DataFrame,
     datapackage_name: str,
-    scenario: str | list[str],
+    scenario: str | list[str] | None = None,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
     scenario_column: str = "scenario",
     var_name_col: str = "var_name",
@@ -143,12 +143,23 @@ def apply_element_data(  # noqa: PLR0913
     csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage using DuckDB."""
-    settings.logger.info(
-        f"Applying element data from '{data_source}' with scenario filter '{scenario}' on '{datapackage_name}'.",
-    )
+    if scenario is None:
+        settings.logger.info(
+            f"Applying element data from '{data_source}' on '{datapackage_name}'.",
+        )
+    else:
+        settings.logger.info(
+            f"Applying element data from '{data_source}' with scenario filter '{scenario}' on '{datapackage_name}'.",
+        )
 
     con = get_duckdb_connection()
-    import_data_table(con, data_source, scenario, scenario_column, csv_options)
+    import_data_table(
+        con,
+        data_source,
+        scenario,
+        scenario_column,
+        csv_options=csv_options,
+    )
 
     # Check if raw_table contains var_name and var_value columns
     columns = [
@@ -158,10 +169,13 @@ def apply_element_data(  # noqa: PLR0913
 
     if is_single_format:
         # Single format: pivot the data_table to get one row per name
+        columns = f"name, {var_name_col}, {var_value_col}"
+        if scenario:
+            columns += f", {scenario_column}"
         con.execute(
             f"CREATE TABLE data_table AS "
             f"PIVOT ("
-            f"SELECT DISTINCT ON (name, {var_name_col}) name, {scenario_column}, {var_name_col}, {var_value_col} "
+            f"SELECT DISTINCT ON (name, {var_name_col}) {columns} "
             f"FROM raw_table"
             f") ON {var_name_col} USING ANY_VALUE({var_value_col})",
         )
@@ -224,40 +238,41 @@ def apply_element_data(  # noqa: PLR0913
 def import_data_table(
     con: duckdb.DuckDBPyConnection,
     data_source: Path | str | DataFrame,
-    scenario: str | list[str],
-    scenario_column: str,
+    scenario: str | list[str] | None = None,
+    scenario_column: str | None = None,
     distinct_columns: list[str] | None = None,
     csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Register data as a table and filter by scenario."""
-    scenarios = [scenario] if isinstance(scenario, str) else scenario
-    if "ALL" not in scenarios:
-        scenarios.insert(0, "ALL")
-    scenario_lookup = ", ".join(f"'{scenario}'" for scenario in scenarios)
-    case_expr = (
-        "CASE "
-        + " ".join(
-            f"WHEN {scenario_column} = '{s}' THEN {i}" for i, s in enumerate(scenarios)
+    scenario_query = ""
+    if scenario is not None:
+        scenarios = [scenario] if isinstance(scenario, str) else scenario
+        if "ALL" not in scenarios:
+            scenarios.insert(0, "ALL")
+        scenario_lookup = ", ".join(f"'{scenario}'" for scenario in scenarios)
+        case_expr = (
+            "CASE "
+            + " ".join(
+                f"WHEN {scenario_column} = '{s}' THEN {i}"
+                for i, s in enumerate(scenarios)
+            )
+            + " END"
         )
-        + " END"
-    )
+        scenario_query = f" WHERE {scenario_column} IN ({scenario_lookup}) ORDER BY {case_expr} DESC;"
     distinct_clause = (
         f"DISTINCT ON ({', '.join(distinct_columns)})" if distinct_columns else ""
     )
     if isinstance(data_source, pd.DataFrame):
         con.execute(
-            f"CREATE TABLE raw_table AS SELECT {distinct_clause} * FROM data_source "
-            f"WHERE {scenario_column} IN ({scenario_lookup}) "
-            f"ORDER BY {case_expr} DESC;",
+            f"CREATE TABLE raw_table AS SELECT {distinct_clause} * FROM data_source"
+            + scenario_query,
         )
     else:
         csv_clause = _get_csv_option_clause(csv_options)
         con.execute(
             f"CREATE TABLE raw_table AS "
             f"SELECT {distinct_clause} * "
-            f"FROM read_csv_auto('{data_source}'{csv_clause}) "
-            f"WHERE {scenario_column} IN ({scenario_lookup}) "
-            f"ORDER BY {case_expr} DESC;",
+            f"FROM read_csv_auto('{data_source}'{csv_clause}) " + scenario_query,
         )
 
 
