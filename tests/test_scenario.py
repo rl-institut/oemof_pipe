@@ -236,6 +236,7 @@ def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:
         data_path,
         "test",
         "liion_storage_profile",
+        column_mapping={"efficiency_renamed": "efficiency"},
         datapackage_dir=tmp_package_dir,
     )
 
@@ -246,8 +247,8 @@ def test_apply_sequence_data_columnwise(tmp_path: Path) -> None:
         f"SELECT efficiency, loss_rate FROM read_csv_auto('{csv_path}', sep=';') LIMIT 5",
     ).fetchall()
 
-    assert float(res[0][0]) == 1.0
-    assert float(res[4][0]) == 5.0  # noqa: PLR2004
+    assert float(res[0][0]) == 23  # noqa: PLR2004
+    assert float(res[4][1]) == 23  # noqa: PLR2004
 
 
 def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
@@ -308,7 +309,7 @@ def test_apply_sequence_data_with_mapping(tmp_path: Path) -> None:
         "mapping",
         "electricity_demand_profile",
         datapackage_dir=tmp_package_dir,
-        mapping={"time": "timeindex", "demand": "electricity-demand-profile"},
+        column_mapping={"time": "timeindex", "demand": "electricity-demand-profile"},
         csv_options={"skip": 1},
     )
 

@@ -334,13 +334,19 @@ def apply_sequence_data(  # noqa: PLR0913
             csv_options=csv_options,
         )
     else:
-        _apply_sequence_data_columnwise(data_source, resource, mapping, csv_options)
+        _apply_sequence_data_columnwise(
+            data_source,
+            resource,
+            column_mapping=column_mapping,
+            csv_options=csv_options,
+        )
 
 
 def _apply_sequence_data_columnwise(
     data_source: Path | str | pd.DataFrame,
     resource: ResourceHandler,
-    mapping: dict[str, str],
+    *,
+    column_mapping: dict[str, str] | None = None,
     csv_options: dict[str, Any] | None = None,
 ) -> None:
     """Apply scenario data from CSV to an existing datapackage."""
@@ -355,8 +361,8 @@ def _apply_sequence_data_columnwise(
             f"CREATE TABLE data_table AS SELECT * FROM read_csv_auto('{data_source}'{csv_clause})",
         )
 
-    if mapping:
-        select_clause = _get_mapping_clause(con, "data_table", mapping)
+    if column_mapping:
+        select_clause = _get_mapping_clause(con, "data_table", column_mapping)
         con.execute(
             f"CREATE OR REPLACE TABLE data_table AS SELECT {select_clause} FROM data_table",
         )
