@@ -57,7 +57,7 @@ def test_apply_scenario_data_single_wo_scenario(tmp_path: Path) -> None:
     apply_element_data(
         data_path,
         "test",
-        name_column="component",
+        column_mapping={"component": "name"},
         datapackage_dir=tmp_package_dir,
     )
 
@@ -202,7 +202,7 @@ def test_apply_scenario_data_multiple_wo_scenario(tmp_path: Path) -> None:
     apply_element_data(
         data_path,
         "test",
-        name_column="tech",
+        column_mapping={"tech": "name"},
         datapackage_dir=tmp_package_dir,
     )
 
@@ -268,7 +268,7 @@ def test_apply_sequence_data_rowwise(tmp_path: Path) -> None:
         "electricity_demand_profile",
         datapackage_dir=tmp_package_dir,
         scenario=["2050-base", "2050-el_eff"],
-        scenario_column="scenario_key",
+        column_mapping={"scenario_key": "scenario"},
     )
 
     csv_path = (

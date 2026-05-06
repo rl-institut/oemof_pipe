@@ -137,8 +137,7 @@ def apply_element_data(  # noqa: PLR0913
     datapackage_name: str,
     scenario: str | list[str] | None = None,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
-    name_column: str = "name",
-    scenario_column: str = "scenario",
+    column_mapping: dict[str, str] | None = None,
     var_name_col: str = "var_name",
     var_value_col: str = "var_value",
     csv_options: dict[str, Any] | None = None,
@@ -158,8 +157,7 @@ def apply_element_data(  # noqa: PLR0913
         con,
         data_source,
         scenario,
-        scenario_column,
-        name_column=name_column,
+        column_mapping=column_mapping,
         csv_options=csv_options,
     )
 
@@ -173,7 +171,7 @@ def apply_element_data(  # noqa: PLR0913
         # Single format: pivot the data_table to get one row per name
         columns = f"name, {var_name_col}, {var_value_col}"
         if scenario:
-            columns += f", {scenario_column}"
+            columns += ", scenario"
         con.execute(
             f"CREATE TABLE data_table AS "
             f"PIVOT ("
@@ -185,7 +183,7 @@ def apply_element_data(  # noqa: PLR0913
         attributes = [
             col[1]
             for col in con.execute("PRAGMA table_info('data_table')").fetchall()
-            if col[1] not in ("name", scenario_column)
+            if col[1] not in ("name", "scenario")
         ]
         attribute_clause = ",".join(f"MAX({attr}) AS {attr}" for attr in attributes)
         con.execute(
@@ -212,7 +210,7 @@ def apply_element_data(  # noqa: PLR0913
         # Find matching columns
         update_cols = _get_update_columns(
             con,
-            excluded_columns=["name", scenario_column, "id"],
+            excluded_columns=["name", "scenario", "id"],
         )
         if update_cols:
             settings.logger.debug(
@@ -241,8 +239,8 @@ def import_data_table(
     con: duckdb.DuckDBPyConnection,
     data_source: Path | str | DataFrame,
     scenario: str | list[str] | None = None,
-    scenario_column: str | None = None,
-    name_column: str | None = "name",
+    *,
+    column_mapping: dict[str, str] | None = None,
     distinct_columns: list[str] | None = None,
     csv_options: dict[str, Any] | None = None,
 ) -> None:
@@ -256,25 +254,32 @@ def import_data_table(
         case_expr = (
             "CASE "
             + " ".join(
-                f"WHEN {scenario_column} = '{s}' THEN {i}"
-                for i, s in enumerate(scenarios)
+                f"WHEN scenario = '{s}' THEN {i}" for i, s in enumerate(scenarios)
             )
             + " END"
         )
-        scenario_query = f" WHERE {scenario_column} IN ({scenario_lookup}) ORDER BY {case_expr} DESC;"
+        scenario_query = (
+            f" WHERE scenario IN ({scenario_lookup}) ORDER BY {case_expr} DESC;"
+        )
     distinct_clause = (
         f"DISTINCT ON ({', '.join(distinct_columns)})" if distinct_columns else ""
     )
+
+    columns = "*"
+    if column_mapping:
+        for name, new_name in column_mapping.items():
+            columns += f", {name} AS {new_name}"
+
     if isinstance(data_source, pd.DataFrame):
         con.execute(
-            f"CREATE TABLE raw_table AS SELECT {distinct_clause} {name_column} AS name, * FROM data_source"
+            f"CREATE TABLE raw_table AS SELECT {distinct_clause} {columns} FROM data_source"
             + scenario_query,
         )
     else:
         csv_clause = _get_csv_option_clause(csv_options)
         con.execute(
             f"CREATE TABLE raw_table AS "
-            f"SELECT {distinct_clause} {name_column} AS name, * "
+            f"SELECT {distinct_clause} {columns} "
             f"FROM read_csv_auto('{data_source}'{csv_clause}) " + scenario_query,
         )
 
@@ -285,7 +290,7 @@ def apply_sequence_data(  # noqa: PLR0913
     sequence_name: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
     scenario: str | list[str] = "ALL",
-    scenario_column: str = "scenario",
+    column_mapping: dict[str, str] | None = None,
     var_name_col: str = "var_name",
     series_col: str = "series",
     mapping: dict[str, str] | None = None,
@@ -323,7 +328,7 @@ def apply_sequence_data(  # noqa: PLR0913
             data_source=data_source,
             resource=resource,
             scenario=scenario,
-            scenario_column=scenario_column,
+            column_mapping=column_mapping,
             var_name_col=var_name_col,
             series_col=series_col,
             csv_options=csv_options,
@@ -413,7 +418,7 @@ def _apply_sequence_data_rowwise(
     data_source: Path | str | pd.DataFrame,
     resource: ResourceHandler,
     scenario: str | list[str] = "ALL",
-    scenario_column: str = "scenario_key",
+    column_mapping: dict[str, str] | None = None,
     var_name_col: str = "var_name",
     series_col: str = "series",
     csv_options: dict[str, Any] | None = None,
@@ -430,7 +435,7 @@ def _apply_sequence_data_rowwise(
         con,
         data_source,
         scenario,
-        scenario_column,
+        column_mapping=column_mapping,
         distinct_columns=["var_name"],
         csv_options=csv_options,
     )
