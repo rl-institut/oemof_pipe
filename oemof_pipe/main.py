@@ -4,7 +4,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from oemof_pipe import blueprint, scenario, settings
+from oemof_pipe import blueprint, gathering, scenario, settings
 
 
 def check_overriding_of_datapackage(
@@ -35,6 +35,17 @@ def scenario_command(args: argparse.Namespace) -> None:
     scenario.create_scenario(args.datapackage_name, args.scenario_name)
 
 
+def gather_command(args: argparse.Namespace) -> None:
+    """Run gather command."""
+    output_path = Path(args.output)
+    df = gathering.gather_element_data(
+        args.datapackage_names,
+        datapackage_dir=settings.DATAPACKAGE_DIR,
+    )
+    df.to_csv(output_path, sep=";", index=False)
+    settings.logger.info(f"Gathered data written to '{output_path}'.")
+
+
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser()
@@ -60,6 +71,20 @@ def main() -> None:
         help="Override datapackage if it exists.",
     )
     scenario_parser.set_defaults(func=scenario_command)
+
+    gather_parser = subparsers.add_parser("gather")
+    gather_parser.add_argument(
+        "datapackage_names",
+        nargs="+",
+        help="One or more datapackage names to gather data from.",
+    )
+    gather_parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="Output CSV file path to write gathered data to.",
+    )
+    gather_parser.set_defaults(func=gather_command)
 
     args = parser.parse_args()
     if hasattr(args, "func"):

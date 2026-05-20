@@ -54,7 +54,8 @@ lint.ignore = [
 ]
 lint.unfixable = ["UP007", "I001"]
 exclude = [
-  "alembic/"
+  "alembic/",
+  "tests/"
 ]
 fix = true
 show-fixes = true
