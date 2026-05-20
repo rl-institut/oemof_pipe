@@ -34,6 +34,8 @@ _OUTPUT_COLS: tuple[str, ...] = (
 def gather_element_data(
     datapackage_names: str | list[str],
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    *,
+    empty_only: bool = False,
 ) -> pd.DataFrame:
     """
     Gather element data from datapackages into single CSV format.
@@ -47,6 +49,7 @@ def gather_element_data(
     Args:
         datapackage_names: Name or list of datapackage names to scan.
         datapackage_dir: Base directory that contains datapackage folders.
+        empty_only: If ``True``, return only rows where ``var_value`` is empty.
 
     Returns:
         DataFrame with columns: ``id``, ``scenario``, ``name``, ``var_name``,
@@ -58,7 +61,7 @@ def gather_element_data(
 
     Examples:
         >>> df = gather_element_data("my_datapackage")
-        >>> df = gather_element_data(["dp_a", "dp_b"])
+        >>> df = gather_element_data(["dp_a", "dp_b"], empty_only=True)
 
     """
     if isinstance(datapackage_names, str):
@@ -75,13 +78,21 @@ def gather_element_data(
 
         for csv_path in sorted(elements_dir.glob("*.csv")):
             settings.logger.debug(f"Gathering element data from '{csv_path}'.")
-            df = pd.read_csv(csv_path, sep=";", dtype=str, keep_default_na=False)
-            frames.append(_transpose_element(df, dp_name))
+            element_df = pd.read_csv(
+                csv_path,
+                sep=";",
+                dtype=str,
+                keep_default_na=False,
+            )
+            frames.append(_transpose_element(element_df, dp_name))
 
     if not frames:
         return pd.DataFrame(columns=list(_OUTPUT_COLS))
 
     result = pd.concat(frames, ignore_index=True)
+    if empty_only:
+        result = result[result["var_value"] == ""]
+    result = result.reset_index(drop=True)
     result.insert(0, "id", range(len(result)))
     return result[list(_OUTPUT_COLS)]
 

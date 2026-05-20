@@ -112,3 +112,21 @@ def test_missing_datapackage_returns_empty():
 def test_id_is_sequential(df):
     """Id column must be a sequential integer index starting at 0."""
     assert list(df["id"]) == list(range(len(df)))
+
+
+def test_empty_only_filters_non_empty():
+    """empty_only=True must return only rows with an empty var_value."""
+    full = gather_element_data(TEST_DP_NAME, datapackage_dir=TEST_DATAPACKAGE_DIR)
+    filtered = gather_element_data(
+        TEST_DP_NAME, datapackage_dir=TEST_DATAPACKAGE_DIR, empty_only=True
+    )
+    assert (filtered["var_value"] == "").all()
+    assert len(filtered) < len(full)
+
+
+def test_empty_only_id_is_sequential():
+    """id must remain sequential after empty_only filtering."""
+    filtered = gather_element_data(
+        TEST_DP_NAME, datapackage_dir=TEST_DATAPACKAGE_DIR, empty_only=True
+    )
+    assert list(filtered["id"]) == list(range(len(filtered)))

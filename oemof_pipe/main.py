@@ -41,6 +41,7 @@ def gather_command(args: argparse.Namespace) -> None:
     df = gathering.gather_element_data(
         args.datapackage_names,
         datapackage_dir=settings.DATAPACKAGE_DIR,
+        empty_only=args.empty_only,
     )
     df.to_csv(output_path, sep=";", index=False)
     settings.logger.info(f"Gathered data written to '{output_path}'.")
@@ -83,6 +84,12 @@ def main() -> None:
         "--output",
         required=True,
         help="Output CSV file path to write gathered data to.",
+    )
+    gather_parser.add_argument(
+        "--empty-only",
+        dest="empty_only",
+        action="store_true",
+        help="Only include rows where var_value is empty.",
     )
     gather_parser.set_defaults(func=gather_command)
 
