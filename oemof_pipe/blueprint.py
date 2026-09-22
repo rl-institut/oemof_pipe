@@ -41,7 +41,7 @@ def create_blueprint(
     if timeindex_start and timeindex_periods:
         timeindex = {
             "start": dt.datetime.fromisoformat(timeindex_start),
-            "periods": timeindex_periods,
+            "periods": int(timeindex_periods),
         }
     else:
         timeindex = None
