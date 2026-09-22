@@ -25,7 +25,11 @@ def check_overriding_of_datapackage(
 def blueprint_command(args: argparse.Namespace) -> None:
     """Run blueprint command."""
     check_overriding_of_datapackage(args.blueprint_name, override=args.force)
-    blueprint.create_blueprint(args.blueprint_name)
+    blueprint.create_blueprint(
+        args.blueprint_name,
+        timeindex_start=args.start,
+        timeindex_periods=args.periods,
+    )
 
 
 def scenario_command(args: argparse.Namespace) -> None:
@@ -59,6 +63,18 @@ def main() -> None:
         dest="force",
         action="store_true",
         help="Override datapackage if it exists.",
+    )
+    blueprint_parser.add_argument(
+        "--start",
+        default=None,
+        required=False,
+        help="Start datetime for sequences.",
+    )
+    blueprint_parser.add_argument(
+        "--periods",
+        default=None,
+        required=False,
+        help="Number of periods for sequences.",
     )
     blueprint_parser.set_defaults(func=blueprint_command)
 

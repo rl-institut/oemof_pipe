@@ -52,6 +52,57 @@ def test_blueprint_creation(tmp_path: Path) -> None:
         assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
 
 
+def test_blueprint_with_timeindex_creation(tmp_path: Path) -> None:
+    """Load the blueprint from test blueprints and create datapackage."""
+    # Setup temporary directories
+    pkg_dir = tmp_path / "datapackages"
+    blueprint_dir = pathlib.Path(__file__).parent / "test_data" / "blueprints"
+
+    create_blueprint(
+        "test",
+        blueprint_dir=blueprint_dir,
+        datapackage_dir=pkg_dir,
+        timeindex_start="2050-01-01 00:00:00",
+        timeindex_periods=3,
+    )
+
+    # Verify output
+    expected_pkg_path = pkg_dir / "test"
+    assert (expected_pkg_path / "datapackage.json").exists()
+    assert (expected_pkg_path / "data/elements/electricity_demand.csv").exists()
+    assert (expected_pkg_path / "data/elements/liion_storage.csv").exists()
+    assert (expected_pkg_path / "data/elements/chp.csv").exists()
+    assert (expected_pkg_path / "data/sequences/liion_storage_profile.csv").exists()
+
+    with (expected_pkg_path / "datapackage.json").open("r") as f:
+        data = json.load(f)
+        assert data["name"] == "test"
+        assert len(data["resources"]) == 5  # noqa: PLR2004
+
+    with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 4  # noqa: PLR2004
+        assert lines[0].strip() == "region;name;type;balanced"
+        assert lines[1].strip() == ";electricity;bus;True"
+        assert lines[2].strip() == ";oil;bus;True"
+        assert lines[3].strip() == ";heat;bus;True"
+
+    with (expected_pkg_path / "data/elements/electricity_demand.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # noqa: PLR2004
+        assert lines[0].strip() == "region;amount;bus;type;name"
+        assert lines[1].strip() == "BB;;electricity;load;d1"
+        assert lines[2].strip() == "B;50;;load;d2"
+
+    with (expected_pkg_path / "data/sequences/liion_storage_profile.csv").open(
+        "r",
+    ) as f:
+        lines = f.readlines()
+        assert len(lines) == 4  # noqa: PLR2004
+        assert lines[0].strip() == "timeindex;liion-efficiency;liion-loss_rate"
+        assert lines[3].strip() == "2050-01-01 02:00:00;0;0"
+
+
 def test_regions_blueprint(tmp_path: Path) -> None:
     """Load the region blueprint from test blueprints folder and create datapackage."""
     # Setup temporary directories

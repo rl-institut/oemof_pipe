@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from datetime import datetime
     from frictionless import Package
 
+import datetime as dt
 from pathlib import Path
 
 import duckdb
@@ -28,6 +28,8 @@ def create_blueprint(
     blueprint_name: str,
     blueprint_dir: Path = settings.BLUEPRINT_DIR,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    timeindex_start: str | None = None,
+    timeindex_periods: int | None = None,
 ) -> None:
     """Read scenario from scenario folder and create a datapackage from it."""
     blueprint_path = blueprint_dir / f"{blueprint_name}.yaml"
@@ -36,8 +38,16 @@ def create_blueprint(
 
     builder = PackageBuilder(blueprint_name, datapackage_dir)
 
+    if timeindex_start and timeindex_periods:
+        timeindex = {
+            "start": dt.datetime.fromisoformat(timeindex_start),
+            "periods": timeindex_periods,
+        }
+    else:
+        timeindex = None
+
     _create_elements(builder, blueprint_data)
-    _create_sequences(builder, blueprint_data)
+    _create_sequences(builder, blueprint_data, timeindex)
     builder.infer_busses_from_resources()
     builder.save_package()
     settings.logger.info(f"Successfully created datapackage '{blueprint_name}'.")
@@ -128,17 +138,17 @@ def _add_instances(  # noqa: C901
                 resource.add_instance(instance_with_region_busses)
 
 
-def _create_sequences(builder: PackageBuilder, blueprint_data: dict) -> None:
+def _create_sequences(
+    builder: PackageBuilder,
+    blueprint_data: dict,
+    timeindex: dict | None,
+) -> None:
     """Add sequences from blueprint data to package builder."""
-    timeindex_info = blueprint_data.get("timeindex", {})
-    timeindex_format = timeindex_info.get("format")
-    timeindex = list(
-        (
-            hourly_range(timeindex_info["start"], timeindex_info["periods"])
-            if timeindex_info
-            else None
-        ),
+    timeindex_info = (
+        timeindex if timeindex is not None else blueprint_data.get("timeindex")
     )
+    timeindex_format = timeindex_info.get("format")
+    timeindex = list(hourly_range(timeindex_info["start"], timeindex_info["periods"]))
 
     # Add sequences explicitly set in blueprint file
     sequences = blueprint_data.get("sequences", {})
