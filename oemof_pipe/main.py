@@ -27,6 +27,7 @@ def blueprint_command(args: argparse.Namespace) -> None:
     check_overriding_of_datapackage(args.blueprint_name, override=args.force)
     blueprint.create_blueprint(
         args.blueprint_name,
+        datapackage_name=args.target,
         timeindex_start=args.start,
         timeindex_periods=args.periods,
     )
@@ -63,6 +64,12 @@ def main() -> None:
         dest="force",
         action="store_true",
         help="Override datapackage if it exists.",
+    )
+    blueprint_parser.add_argument(
+        "--target",
+        default=None,
+        required=False,
+        help="Optional target name for datapackage.",
     )
     blueprint_parser.add_argument(
         "--start",
