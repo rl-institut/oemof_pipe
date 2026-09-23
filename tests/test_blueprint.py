@@ -4,6 +4,8 @@ import json
 import pathlib
 from pathlib import Path
 
+import pytest
+
 from oemof_pipe.blueprint import create_blueprint
 
 
@@ -52,7 +54,15 @@ def test_blueprint_creation(tmp_path: Path) -> None:
         assert lines[3].strip() == "2016-01-01 02:00:00;0;0"
 
 
-def test_blueprint_with_timeindex_creation(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("datapackage_name", "expected_name"),
+    [(None, "test"), ("custom", "custom")],
+)
+def test_blueprint_with_timeindex_creation(
+    tmp_path: Path,
+    datapackage_name: str | None,
+    expected_name: str,
+) -> None:
     """Load the blueprint from test blueprints and create datapackage."""
     # Setup temporary directories
     pkg_dir = tmp_path / "datapackages"
@@ -62,12 +72,13 @@ def test_blueprint_with_timeindex_creation(tmp_path: Path) -> None:
         "test",
         blueprint_dir=blueprint_dir,
         datapackage_dir=pkg_dir,
+        datapackage_name=datapackage_name,
         timeindex_start="2050-01-01 00:00:00",
         timeindex_periods=3,
     )
 
     # Verify output
-    expected_pkg_path = pkg_dir / "test"
+    expected_pkg_path = pkg_dir / expected_name
     assert (expected_pkg_path / "datapackage.json").exists()
     assert (expected_pkg_path / "data/elements/electricity_demand.csv").exists()
     assert (expected_pkg_path / "data/elements/liion_storage.csv").exists()
@@ -76,7 +87,7 @@ def test_blueprint_with_timeindex_creation(tmp_path: Path) -> None:
 
     with (expected_pkg_path / "datapackage.json").open("r") as f:
         data = json.load(f)
-        assert data["name"] == "test"
+        assert data["name"] == expected_name
         assert len(data["resources"]) == 5  # noqa: PLR2004
 
     with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:

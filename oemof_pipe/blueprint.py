@@ -28,6 +28,7 @@ def create_blueprint(
     blueprint_name: str,
     blueprint_dir: Path = settings.BLUEPRINT_DIR,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
+    datapackage_name: str | None = None,
     timeindex_start: str | None = None,
     timeindex_periods: int | None = None,
 ) -> None:
@@ -36,7 +37,8 @@ def create_blueprint(
     with blueprint_path.open("r") as f:
         blueprint_data = yaml.safe_load(f)
 
-    builder = PackageBuilder(blueprint_name, datapackage_dir)
+    datapackage_name = datapackage_name or blueprint_name
+    builder = PackageBuilder(datapackage_name, datapackage_dir)
 
     if timeindex_start and timeindex_periods:
         timeindex = {
@@ -50,7 +52,9 @@ def create_blueprint(
     _create_sequences(builder, blueprint_data, timeindex)
     builder.infer_busses_from_resources()
     builder.save_package()
-    settings.logger.info(f"Successfully created datapackage '{blueprint_name}'.")
+    settings.logger.info(
+        f"Successfully created datapackage '{datapackage_name}' from blueprint '{blueprint_name}'.",
+    )
 
 
 def _create_elements(builder: PackageBuilder, blueprint_data: dict) -> None:
