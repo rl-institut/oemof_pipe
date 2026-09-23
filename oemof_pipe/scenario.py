@@ -86,10 +86,11 @@ def create_scenario(
     scenario: str,
     datapackage_dir: Path = settings.DATAPACKAGE_DIR,
     scenario_dir: Path = settings.SCENARIO_DIR,
+    target_name: str | None = None,
 ) -> None:
     """Duplicate datapackage given by name and manipulate its data using scenario."""
     # Copy datapackage as new datapackage with scenario name as suffix
-    scenario_datapackage = f"{datapackage_name}_{scenario}"
+    scenario_datapackage = target_name or f"{datapackage_name}_{scenario}"
     settings.logger.info(f"Creating new datapackage '{scenario_datapackage}'.")
     shutil.copytree(
         datapackage_dir / datapackage_name,

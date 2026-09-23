@@ -37,7 +37,11 @@ def scenario_command(args: argparse.Namespace) -> None:
     """Run scenario command."""
     datapackage_name = f"{args.datapackage_name}_{args.scenario_name}"
     check_overriding_of_datapackage(datapackage_name, override=args.force)
-    scenario.create_scenario(args.datapackage_name, args.scenario_name)
+    scenario.create_scenario(
+        args.datapackage_name,
+        args.scenario_name,
+        target_name=args.target,
+    )
 
 
 def gather_command(args: argparse.Namespace) -> None:
@@ -93,6 +97,12 @@ def main() -> None:
         dest="force",
         action="store_true",
         help="Override datapackage if it exists.",
+    )
+    scenario_parser.add_argument(
+        "--target",
+        default=None,
+        required=False,
+        help="Optional target name for datapackage.",
     )
     scenario_parser.set_defaults(func=scenario_command)
 
