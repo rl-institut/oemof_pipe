@@ -38,6 +38,7 @@ def test_blueprint_command_forwards_timeindex_args(
     mock_check.assert_called_once_with("test_bp", override=False)
     mock_create.assert_called_once_with(
         "test_bp",
+        datapackage_name=None,
         timeindex_start=expected_start,
         timeindex_periods=expected_periods,
     )
