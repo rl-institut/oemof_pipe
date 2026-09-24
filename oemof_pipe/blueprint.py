@@ -148,9 +148,9 @@ def _create_sequences(
     timeindex: dict | None,
 ) -> None:
     """Add sequences from blueprint data to package builder."""
-    timeindex_info = (
-        timeindex if timeindex is not None else blueprint_data.get("timeindex")
-    )
+    timeindex_info = blueprint_data.get("timeindex")
+    if isinstance(timeindex, dict):
+        timeindex_info.update(timeindex)
     timeindex_format = timeindex_info.get("format")
     timeindex = list(hourly_range(timeindex_info["start"], timeindex_info["periods"]))
 

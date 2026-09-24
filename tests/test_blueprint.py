@@ -89,6 +89,9 @@ def test_blueprint_with_timeindex_creation(
         data = json.load(f)
         assert data["name"] == expected_name
         assert len(data["resources"]) == 5  # noqa: PLR2004
+        assert (
+            data["resources"][4]["schema"]["fields"][0]["format"] == "%Y-%m-%d %H:%M:%S"
+        )
 
     with (expected_pkg_path / "data/elements/bus.csv").open("r") as f:
         lines = f.readlines()
