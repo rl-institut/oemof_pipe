@@ -21,9 +21,12 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
     resource = ElementResourceBuilder(
         "storage",
         "liion_storage",
-        ["region", "capacity"],
+        ["region", "capacity", "output_parameters"],
     )
+    resource.add_instance({"name": "s1", "output_parameters": {"a": "b"}})
+    resource.add_instance({"name": "s2"})
     builder.add_resource(resource)
+
     resource = ElementResourceBuilder(
         "load",
         "electricity_demand",
@@ -67,6 +70,13 @@ def test_add_element_resource_and_save(tmp_path: pathlib.Path) -> None:
         assert len(lines) == 2  # noqa: PLR2004
         assert lines[0].strip() == "region;amount;bus;type;name"
         assert lines[1].strip() == "BB;100;electricity;load;d1"
+
+    with (pkg_dir / "data/elements/liion_storage.csv").open("r") as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # noqa: PLR2004
+        assert lines[0].strip() == "region;capacity;output_parameters;type;name"
+        assert lines[1].strip() == ';;"{""a"": ""b""}";storage;s1'
+        assert lines[2].strip() == ";;{};storage;s2"
 
 
 def test_add_sequence_resource_and_save(tmp_path: pathlib.Path) -> None:

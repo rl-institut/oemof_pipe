@@ -176,12 +176,21 @@ class ElementResourceBuilder:
                 f"Type ('{data['type']}') cannot be different from component type ('{self.component.name}').",
             )
 
-        # Check if all data fields match
-        for key in data:
+        for key in data:  # noqa: PLC0206
+            # Check if all data fields match
             if key not in self.fields:
                 raise KeyError(
                     f"Attribute {key} not found in resource. Possible attributes are: {list(self.fields)}.",
                 )
+            # Turn dicts into JSON to preserve quotes
+            if isinstance(data[key], dict):
+                data[key] = json.dumps(data[key])
+
+        # Set empty dict as default for missing fields of type dict
+        for field_name, field_data in self.fields.items():
+            if field_name not in data and field_data["type"] == "dict":
+                data[field_name] = {}
+
         self.instances.append(data)
 
     @property
