@@ -19,6 +19,7 @@ from . import settings
 
 
 FRICTIONLESS_TO_DUCKDB_MAPPING = {"datetime": "TIMESTAMP", "number": "DOUBLE"}
+GIVEN_VARS_COL = "_given_vars"
 
 
 @dataclass
@@ -187,8 +188,12 @@ def apply_element_data(  # noqa: PLR0913
             if col[1] not in ("name", "scenario")
         ]
         attribute_clause = ",".join(f"MAX({attr}) AS {attr}" for attr in attributes)
+        # Track which var_names are given per name, so missing ones (NULL after pivot) don't overwrite resource data
         con.execute(
-            f"CREATE OR REPLACE TABLE data_table AS SELECT name, {attribute_clause} FROM data_table GROUP BY name;",
+            f"CREATE OR REPLACE TABLE data_table AS "
+            f"SELECT * FROM (SELECT name, {attribute_clause} FROM data_table GROUP BY name) "
+            f"JOIN (SELECT name, list(DISTINCT {var_name_col}) AS {GIVEN_VARS_COL} FROM raw_table GROUP BY name) "
+            f"USING (name);",
         )
     else:
         con.execute(
@@ -211,15 +216,27 @@ def apply_element_data(  # noqa: PLR0913
         # Find matching columns
         update_cols = _get_update_columns(
             con,
-            excluded_columns=["name", "scenario", "id"],
+            excluded_columns=["name", "scenario", "id", GIVEN_VARS_COL],
         )
         if update_cols:
             settings.logger.debug(
                 f"Updating columns {[col[0] for col in update_cols]} for element '{res.name}' from '{data_source}'.",
             )
+            res_types = {
+                col[1]: col[2]
+                for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
+            }
             set_clause = ", ".join(
                 [
-                    f"{res_col} = data_table.{data_col}"
+                    (
+                        (
+                            f"{res_col} = CASE WHEN list_contains(data_table.{GIVEN_VARS_COL}, '{data_col}') "
+                            f"THEN CAST(data_table.{data_col} AS {res_types[res_col]}) "
+                            f"ELSE resource_table.{res_col} END"
+                        )
+                        if is_single_format
+                        else f"{res_col} = data_table.{data_col}"
+                    )
                     for data_col, res_col in update_cols
                 ],
             )

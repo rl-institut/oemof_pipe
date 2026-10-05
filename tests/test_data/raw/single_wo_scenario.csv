@@ -1,2 +1,3 @@
 id;component;var_name;carrier;region;tech;type;var_value;var_unit;source;comment
 0;d1;amount;biomass;AD;gt;conversion;100;MW;;Green field assumption
+0;d3;bus;biomass;AD;gt;conversion;new;MW;;Green field assumption
