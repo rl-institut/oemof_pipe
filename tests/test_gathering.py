@@ -62,7 +62,7 @@ def test_component_names_present(df):
     """Known component names from test datapackage must appear."""
     names = set(df["name"])
     assert "d1" in names
-    assert "d2" in names
+    assert "d3" in names
     assert "liion" in names
     assert "ex" in names
 
