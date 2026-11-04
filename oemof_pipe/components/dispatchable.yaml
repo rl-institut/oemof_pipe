@@ -1,0 +1,76 @@
+
+busses:
+  - bus
+
+sequences:
+  - profile
+
+attributes:
+  region:
+    type: str
+    unit: n/a
+    description: Country code
+  name:
+    type: str
+    unit: n/a
+    description: Name
+  type:
+    type: str
+    unit: n/a
+    description: Type
+  carrier:
+    type: str
+    unit: n/a
+    description: Energy carrier
+  tech:
+    type: str
+    unit: n/a
+    description: Technology
+  bus:
+    type: str
+    unit: n/a
+    description: The output bus this component is connected to
+  profile:
+    type: float
+    unit: unitless
+    description: Profile of the output such that profile[t] * installed capacity yields the upper bound for timestep t
+  capacity:
+    type: float
+    unit: MW
+    description: Installed capacity
+  capacity_cost:
+    type: float
+    unit: Eur/MW
+    description: Annualized costs of capacity expansion
+  fixed_costs:
+    type: float
+    unit: Eur/MWh
+    description: Cost per unit of used fuel
+  marginal_cost:
+    type: float
+    unit: Eur/MWh
+    description: Marginal cost
+  expandable:
+    type: boolean
+    unit: n/a
+    description: Capacity can be expanded
+  capacity_potential:
+    type: float
+    unit: MW
+    description: Maximum invest capacity in unit of output capacity
+  capacity_minimum:
+    type: float
+    unit: MW
+    description: Minimum invest capacity in unit of output capacity
+  lifetime:
+    type: int
+    unit: year
+    description: Lifetime of the component
+  age:
+    type: int
+    unit: year
+    description: Current age of the component
+  output_parameters:
+    type: dict
+    unit: n/a
+    description: Optional parameters passed to oemof-solph's output flow
