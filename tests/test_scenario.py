@@ -1,13 +1,16 @@
 """Module to test datapackage manipulation from scenario datasets."""
 
+import csv
 import pathlib
 import shutil
 from pathlib import Path
 
 import duckdb
 import pandas as pd
+import pytest
 
 from oemof_pipe import scenario
+from oemof_pipe.builder import ElementResourceBuilder, PackageBuilder
 from oemof_pipe.scenario import apply_element_data, apply_sequence_data
 
 
@@ -360,3 +363,47 @@ def test_create_scenario() -> None:
         assert lines[1].strip() == "2026-01-01 00:00:00;4.586600128650665;0.0"
 
     shutil.rmtree(pkg_dir)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pd.DataFrame(
+            [
+                {"name": "pp", "var_name": "age", "var_value": 5},
+                {"name": "pp", "var_name": "capacity", "var_value": 10.5},
+            ],
+        ),
+        pd.DataFrame([{"name": "pp", "age": 5, "capacity": 10.5}]),
+        # Missing value upcasts age column to float64 in pandas
+        pd.DataFrame(
+            [
+                {"name": "pp", "age": 5, "capacity": 10.5},
+                {"name": "other", "age": None, "capacity": 1.0},
+            ],
+        ),
+    ],
+    ids=["single", "multiple", "multiple_with_missing"],
+)
+def test_apply_element_data_keeps_integer_type(
+    tmp_path: Path,
+    data: pd.DataFrame,
+) -> None:
+    """Integer attributes (e.g. age) must not be written as float ('5.0')."""
+    resource = ElementResourceBuilder(
+        "dispatchable",
+        "pp",
+        ["name", "type", "bus", "capacity", "age"],
+    )
+    resource.add_instance({"name": "pp", "bus": "electricity"})
+    builder = PackageBuilder("int_test", tmp_path)
+    builder.add_resource(resource)
+    builder.save_package()
+
+    apply_element_data(data, "int_test", datapackage_dir=tmp_path)
+
+    csv_path = tmp_path / "int_test" / "data" / "elements" / "pp.csv"
+    with csv_path.open() as f:
+        row = next(csv.DictReader(f, delimiter=";"))
+    assert row["age"] == "5"
+    assert float(row["capacity"]) == 10.5  # noqa: PLR2004

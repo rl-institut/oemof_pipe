@@ -226,16 +226,21 @@ def apply_element_data(  # noqa: PLR0913
                 col[1]: col[2]
                 for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
             }
+            # Long-format values are inferred as DOUBLE (5 -> "5.0") and empty
+            # columns as VARCHAR, so enforce schema type for integer columns
+            for schema_field in res.schema.fields:
+                if schema_field.type == "integer" and schema_field.name in res_types:
+                    res_types[schema_field.name] = "BIGINT"
             set_clause = ", ".join(
                 [
                     (
                         (
                             f"{res_col} = CASE WHEN list_contains(data_table.{GIVEN_VARS_COL}, '{data_col}') "
                             f"THEN CAST(data_table.{data_col} AS {res_types[res_col]}) "
-                            f"ELSE resource_table.{res_col} END"
+                            f"ELSE CAST(resource_table.{res_col} AS {res_types[res_col]}) END"
                         )
                         if is_single_format
-                        else f"{res_col} = data_table.{data_col}"
+                        else f"{res_col} = CAST(data_table.{data_col} AS {res_types[res_col]})"
                     )
                     for data_col, res_col in update_cols
                 ],
