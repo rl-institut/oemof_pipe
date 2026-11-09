@@ -18,7 +18,12 @@ from pandas import DataFrame
 from . import settings
 
 
-FRICTIONLESS_TO_DUCKDB_MAPPING = {"datetime": "TIMESTAMP", "number": "DOUBLE"}
+FRICTIONLESS_TO_DUCKDB_MAPPING = {
+    "datetime": "TIMESTAMP",
+    "number": "DOUBLE",
+    "integer": "BIGINT",
+    "boolean": "BOOLEAN",
+}
 GIVEN_VARS_COL = "_given_vars"
 
 
@@ -208,9 +213,11 @@ def apply_element_data(  # noqa: PLR0913
 
         res_full_path = datapackage_dir / datapackage_name / res.path
 
-        # Load resource into a table
+        # Load resource as text first; type inference fails for empty columns
+        # and would silently round floats in integer columns
         con.execute(
-            f"CREATE TABLE resource_table AS SELECT * FROM read_csv_auto('{res_full_path}')",
+            f"CREATE TABLE resource_table AS "
+            f"SELECT * FROM read_csv_auto('{res_full_path}', all_varchar=True)",
         )
 
         # Find matching columns
@@ -222,29 +229,36 @@ def apply_element_data(  # noqa: PLR0913
             settings.logger.debug(
                 f"Updating columns {[col[0] for col in update_cols]} for element '{res.name}' from '{data_source}'.",
             )
+            # Apply schema types only to resources being updated
             res_types = {
-                col[1]: col[2]
-                for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
+                schema_field.name: FRICTIONLESS_TO_DUCKDB_MAPPING.get(
+                    schema_field.type,
+                    "VARCHAR",
+                )
+                for schema_field in res.schema.fields
             }
-            # Long-format values are inferred as DOUBLE (5 -> "5.0") and empty
-            # columns as VARCHAR, so enforce schema type for integer columns
-            for schema_field in res.schema.fields:
-                if schema_field.type == "integer" and schema_field.name in res_types:
-                    res_types[schema_field.name] = "BIGINT"
-            set_clause = ", ".join(
-                [
-                    (
-                        (
-                            f"{res_col} = CASE WHEN list_contains(data_table.{GIVEN_VARS_COL}, '{data_col}') "
-                            f"THEN CAST(data_table.{data_col} AS {res_types[res_col]}) "
-                            f"ELSE CAST(resource_table.{res_col} AS {res_types[res_col]}) END"
-                        )
-                        if is_single_format
-                        else f"{res_col} = CAST(data_table.{data_col} AS {res_types[res_col]})"
-                    )
-                    for data_col, res_col in update_cols
-                ],
+            select_clause = ", ".join(
+                f'{_cast(f'"{col[1]}"', res_types.get(col[1], "VARCHAR"), col[1])} AS "{col[1]}"'
+                for col in con.execute("PRAGMA table_info('resource_table')").fetchall()
             )
+            con.execute(
+                f"CREATE OR REPLACE TABLE resource_table AS "
+                f"SELECT {select_clause} FROM resource_table",
+            )
+            assignments = []
+            for data_col, res_col in update_cols:
+                value = _cast(
+                    f"data_table.{data_col}",
+                    res_types.get(res_col, "VARCHAR"),
+                    res_col,
+                )
+                if is_single_format:
+                    value = (
+                        f"CASE WHEN list_contains(data_table.{GIVEN_VARS_COL}, '{data_col}') "
+                        f"THEN {value} ELSE resource_table.{res_col} END"
+                    )
+                assignments.append(f"{res_col} = {value}")
+            set_clause = ", ".join(assignments)
             con.execute(
                 f"UPDATE resource_table SET {set_clause} FROM data_table "
                 f"WHERE resource_table.name = data_table.name OR resource_table.name LIKE '%-' || data_table.name;",
@@ -256,6 +270,20 @@ def apply_element_data(  # noqa: PLR0913
             )
 
         con.execute("DROP TABLE IF EXISTS resource_table")
+
+
+def _cast(expr: str, duckdb_type: str, column: str) -> str:
+    """Return SQL cast; integer casts raise on non-integer values instead of rounding."""
+    if duckdb_type != "BIGINT":
+        return f"CAST({expr} AS {duckdb_type})"
+    as_double = f"CAST({expr} AS DOUBLE)"
+    escaped_column = column.replace("'", "''")
+    return (
+        f"CASE WHEN {expr} IS NULL THEN NULL "
+        f"WHEN {as_double} = trunc({as_double}) THEN CAST({expr} AS BIGINT) "
+        f"ELSE error('Non-integer value ' || CAST({expr} AS VARCHAR) || "
+        f"' in integer column ''{escaped_column}''') END"
+    )
 
 
 def import_data_table(

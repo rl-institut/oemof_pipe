@@ -158,10 +158,10 @@ def test_apply_scenario_data_with_different_regions(tmp_path: Path) -> None:
         lines = f.readlines()
         assert len(lines) == 5  # noqa: PLR2004
         assert lines[0].strip() == "amount;bus;profile;region;type;name"
-        assert lines[1].strip() == "10;BB-electricity;BB-d1-profile;BB;load;BB-d1"
-        assert lines[2].strip() == "10;B-electricity;B-d1-profile;B;load;B-d1"
-        assert lines[3].strip() == "6;;BB-d2-profile;BB;load;BB-d2"
-        assert lines[4].strip() == "5;;B-d2-profile;B;load;B-d2"
+        assert lines[1].strip() == "10.0;BB-electricity;BB-d1-profile;BB;load;BB-d1"
+        assert lines[2].strip() == "10.0;B-electricity;B-d1-profile;B;load;B-d1"
+        assert lines[3].strip() == "6.0;;BB-d2-profile;BB;load;BB-d2"
+        assert lines[4].strip() == "5.0;;B-d2-profile;B;load;B-d2"
 
 
 def test_apply_scenario_data_multiple(tmp_path: Path) -> None:
@@ -354,7 +354,7 @@ def test_create_scenario() -> None:
         lines = f.readlines()
         assert len(lines) == 3  # noqa: PLR2004
         assert lines[0].strip() == "region;amount;bus;type;name"
-        assert lines[1].strip() == ";100;electricity;load;d1"
+        assert lines[1].strip() == ";100.0;electricity;load;d1"
 
     with (pkg_dir / "data/sequences/electricity_demand_profile.csv").open("r") as f:
         lines = f.readlines()
@@ -407,3 +407,43 @@ def test_apply_element_data_keeps_integer_type(
         row = next(csv.DictReader(f, delimiter=";"))
     assert row["age"] == "5"
     assert float(row["capacity"]) == 10.5  # noqa: PLR2004
+
+
+@pytest.mark.parametrize(
+    ("instance", "data"),
+    [
+        (
+            {"name": "pp", "bus": "electricity"},
+            pd.DataFrame([{"name": "pp", "var_name": "age", "var_value": 5.5}]),
+        ),
+        (
+            {"name": "pp", "bus": "electricity"},
+            pd.DataFrame([{"name": "pp", "age": 5.5}]),
+        ),
+        (
+            {"name": "pp", "bus": "electricity", "age": 5.5},
+            pd.DataFrame([{"name": "pp", "capacity": 10.5}]),
+        ),
+    ],
+    ids=["single", "multiple", "resource"],
+)
+def test_apply_element_data_rejects_float_in_integer_column(
+    tmp_path: Path,
+    instance: dict,
+    data: pd.DataFrame,
+) -> None:
+    """Float values in integer columns must raise instead of being rounded."""
+    resource = ElementResourceBuilder(
+        "dispatchable",
+        "pp",
+        ["name", "type", "bus", "capacity", "age"],
+    )
+    resource.add_instance(instance)
+    builder = PackageBuilder("int_test", tmp_path)
+    builder.add_resource(resource)
+    builder.save_package()
+
+    with pytest.raises(
+        duckdb.Error, match=r"Non-integer value .* in integer column .age."
+    ):
+        apply_element_data(data, "int_test", datapackage_dir=tmp_path)
