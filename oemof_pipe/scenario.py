@@ -259,9 +259,18 @@ def apply_element_data(  # noqa: PLR0913
                     )
                 assignments.append(f"{res_col} = {value}")
             set_clause = ", ".join(assignments)
+            name_match = (
+                "(resource_table.name = {d}.name "
+                "OR ends_with(resource_table.name, '-' || {d}.name))"
+            )
+            # Match exact name or "<prefix>-<name>"; if several data names match,
+            # only the longest (an exact match, if present) is applied
             con.execute(
                 f"UPDATE resource_table SET {set_clause} FROM data_table "
-                f"WHERE resource_table.name = data_table.name OR resource_table.name LIKE '%-' || data_table.name;",
+                f"WHERE {name_match.format(d='data_table')} "
+                f"AND NOT EXISTS (SELECT 1 FROM data_table AS longer "
+                f"WHERE {name_match.format(d='longer')} "
+                f"AND length(longer.name) > length(data_table.name));",
             )
 
             # Save back to CSV

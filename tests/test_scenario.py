@@ -447,3 +447,41 @@ def test_apply_element_data_rejects_float_in_integer_column(
         duckdb.Error, match=r"Non-integer value .* in integer column .age."
     ):
         apply_element_data(data, "int_test", datapackage_dir=tmp_path)
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["exact_last", "exact_first"])
+def test_apply_element_data_prefers_exact_name_over_suffix(
+    tmp_path: Path,
+    *,
+    reverse: bool,
+) -> None:
+    """Exact name match must win over suffix match (issue #2)."""
+    resource = ElementResourceBuilder(
+        "dispatchable",
+        "pp",
+        ["name", "type", "bus", "capacity"],
+    )
+    for name in ("storage_buffer", "heat-storage_buffer", "other-storage_buffer"):
+        resource.add_instance({"name": name, "bus": "electricity"})
+    builder = PackageBuilder("suffix_test", tmp_path)
+    builder.add_resource(resource)
+    builder.save_package()
+
+    rows = [
+        {"name": "storage_buffer", "capacity": 1.0},
+        {"name": "heat-storage_buffer", "capacity": 2.0},
+    ]
+    data = pd.DataFrame(rows[::-1] if reverse else rows)
+    apply_element_data(data, "suffix_test", datapackage_dir=tmp_path)
+
+    csv_path = tmp_path / "suffix_test" / "data" / "elements" / "pp.csv"
+    with csv_path.open() as f:
+        capacities = {
+            row["name"]: float(row["capacity"])
+            for row in csv.DictReader(f, delimiter=";")
+        }
+    assert capacities == {
+        "storage_buffer": 1.0,
+        "heat-storage_buffer": 2.0,
+        "other-storage_buffer": 1.0,
+    }
